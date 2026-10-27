@@ -29,6 +29,19 @@
             }
         },
         {
+            "name": "vs2026",
+            "inherits": "win",
+            "displayName": "Visual Studio 2026 (x64)",
+            "description": "Generates a Visual Studio 2026 solution for 64-bit Windows.",
+            "generator": "Visual Studio 18 2026",
+            "architecture": "x64",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            }
+        },
+        {
             "name": "windows-qt",
             "inherits": "win",
             "displayName": "Windows + Qt (x64)",
@@ -85,6 +98,13 @@
             "configuration": "Release"
         },
         {
+            "name": "vs2026",
+            "configurePreset": "vs2026",
+            "displayName": "Build Visual Studio 2026 (x64)",
+            "description": "Build the Visual Studio 2026 solution",
+            "configuration": "Release"
+        },
+        {
             "name": "windows-qt",
             "configurePreset": "windows-qt",
             "displayName": "Build Windows + Qt",
@@ -117,6 +137,19 @@
                 {
                     "type": "build",
                     "name": "win"
+                }
+            ]
+        },
+        {
+            "name": "vs2026",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "vs2026"
+                },
+                {
+                    "type": "build",
+                    "name": "vs2026"
                 }
             ]
         },
