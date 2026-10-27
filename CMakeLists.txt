@@ -62,7 +62,32 @@ cmake_dependent_option(W3D_BUILD_OPTION_WEBBROWSER "Build OpenW3D with webbrowse
 add_feature_info(BrowserBuild W3D_BUILD_OPTION_WEBBROWSER "Build OpenW3D with webbrowser")
 
 # Do we want to build with ffmpeg for audio/video decoding?
-cmake_dependent_option(W3D_BUILD_OPTION_FFMPEG "Build with ffmpeg." OFF WIN32 ON)
+# Non-Windows builds always use FFmpeg. 64-bit MSVC builds default to it as well, because
+# the only Miles and Bink binaries available are 32-bit and the stubs produce no sound or
+# video. If the option was not set explicitly and FFmpeg or OpenAL cannot be found, those
+# builds fall back to the stubs with a warning instead of failing.
+if(WIN32)
+    set(_w3d_media_default OFF)
+    if(MSVC AND CMAKE_SIZEOF_VOID_P EQUAL 8)
+        set(_w3d_media_default ON)
+    endif()
+    if(NOT DEFINED CACHE{W3D_BUILD_OPTION_FFMPEG})
+        set(W3D_MEDIA_DEFAULTED ${_w3d_media_default} CACHE INTERNAL "FFmpeg/OpenAL were enabled by default rather than by the user")
+    endif()
+    option(W3D_BUILD_OPTION_FFMPEG "Build with ffmpeg." ${_w3d_media_default})
+
+    if(W3D_BUILD_OPTION_FFMPEG AND W3D_MEDIA_DEFAULTED)
+        find_package(FFmpeg QUIET COMPONENTS AVCODEC AVFORMAT AVUTIL SWSCALE SWRESAMPLE)
+        find_package(OpenAL QUIET)
+        if(NOT FFmpeg_FOUND OR NOT OPENAL_FOUND)
+            message(WARNING "FFmpeg or OpenAL not found; building with the silent Miles and Bink stubs. "
+                "Use the win preset (vcpkg) or install them for sound and movies.")
+            set(W3D_BUILD_OPTION_FFMPEG OFF)
+        endif()
+    endif()
+else()
+    set(W3D_BUILD_OPTION_FFMPEG ON)
+endif()
 add_feature_info(FFMpegBuild W3D_BUILD_OPTION_FFMPEG "Build OpenW3D with FFMpeg")
 
 # Do we want to build with OpenAL/ffmpeg for audio playback?
