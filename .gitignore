@@ -56,6 +56,20 @@ IDL_*.loc
 
 /CMakeUserPresets.json
 /.cache
+
+# AI agent / assistant artifacts
+/.kiro/
+/.kiro-tmp/
+/.claude/
+/CLAUDE.md
+/.cursor/
+/.cursorrules
+/.windsurf/
+/.aider*
+/.continue/
+/.codex/
+/AGENTS.md
+/.github/copilot-instructions.md
 .clang-format
 /.vscode
 /.vs
