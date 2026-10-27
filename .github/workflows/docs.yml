@@ -57,7 +57,7 @@ jobs:
           test -s build/docs/html/files.html
 
       - name: Upload documentation for review
-        if: ${{ !cancelled() && hashFiles('build/docs/html/index.html', 'build/docs/doxygen-warnings.log') != '' }}
+        if: ${{ !cancelled() && github.repository == 'w3dhub/OpenW3D' && hashFiles('build/docs/html/index.html', 'build/docs/doxygen-warnings.log') != '' }}
         uses: actions/upload-artifact@v7
         with:
           name: openw3d-api-docs

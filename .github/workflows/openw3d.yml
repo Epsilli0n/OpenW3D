@@ -154,8 +154,9 @@ jobs:
       run: |
         cmake --build build --parallel ${{ matrix.build-args }}
 
+    # Packaging and artifact upload only run for the upstream repository; forks just build.
     - name: Create windows zip
-      if: ${{ !!matrix.vcpkg }}
+      if: ${{ !!matrix.vcpkg && github.repository == 'w3dhub/OpenW3D' }}
       shell: pwsh
       run: |
         mkdir ./build/openw3d
@@ -173,6 +174,7 @@ jobs:
         7z a openw3d.zip openw3d
 
     - name: Archive binaries
+      if: ${{ github.repository == 'w3dhub/OpenW3D' }}
       uses: actions/upload-artifact@v4
       with:
         name: openw3d
