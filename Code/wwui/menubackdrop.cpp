@@ -96,9 +96,19 @@ MenuBackDropClass::MenuBackDropClass (void)	:
 	//
 	//	Configure the view plane
 	//
+	//	The backdrop scenes are framed for 4:3 with a 45 degree horizontal field of view.
+	//	On wider screens keep the 4:3 vertical view and widen the horizontal one, so the
+	//	logo and the rest of the framing are not cropped top and bottom.
+	//
 	const RectClass &screen_size = Render2DClass::Get_Screen_Resolution ();
+	const float aspect = screen_size.Width () / screen_size.Height ();
+	const float base_aspect = 4.0F / 3.0F;
 	float hfov = DEG_TO_RAD(45.0F);
 	float vfov = (screen_size.Height () / screen_size.Width ()) * hfov;
+	if (aspect > base_aspect) {
+		vfov = hfov / base_aspect;
+		hfov = 2.0F * atanf(tanf(hfov * 0.5F) * (aspect / base_aspect));
+	}
 	Camera->Set_View_Plane (hfov, vfov);
 
 	//
