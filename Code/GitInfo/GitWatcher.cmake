@@ -201,13 +201,14 @@ function(GetGitState _working_dir)
         set(ENV{GIT_LATEST_TAG} ${output})
     endif()
 
-    if (ENV{GIT_LATEST_TAG})
-        RunGitCommand(rev-list "${GIT_LATEST_TAG}..${object}" --count)
+    # Note: if(ENV{...}) is always false in CMake, so compare the expanded value.
+    if(NOT "$ENV{GIT_LATEST_TAG}" STREQUAL "")
+        RunGitCommand(rev-list "$ENV{GIT_LATEST_TAG}..${object}" --count)
         if(exit_code EQUAL 0)
             set(ENV{GIT_REVISION_COUNT} ${output})
         endif()
 
-        if(ENV{GIT_LATEST_TAG} MATCHES "^v([0-9]+)\\.([0-9]+)\\.([0-9]+)(-.*)?$")
+        if("$ENV{GIT_LATEST_TAG}" MATCHES "^v([0-9]+)\\.([0-9]+)\\.([0-9]+)(-.*)?$")
             set(ENV{GIT_VERSION_MAJOR} ${CMAKE_MATCH_1})
             set(ENV{GIT_VERSION_MINOR} ${CMAKE_MATCH_2})
             set(ENV{GIT_VERSION_PATCH} ${CMAKE_MATCH_3})
