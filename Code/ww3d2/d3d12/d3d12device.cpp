@@ -27,8 +27,8 @@ namespace
 {
 	constexpr unsigned RTV_HEAP_SIZE = 64;
 	constexpr unsigned DSV_HEAP_SIZE = 16;
-	constexpr unsigned SRV_STAGING_HEAP_SIZE = 32768;
-	constexpr unsigned SRV_RING_PER_FRAME = 16384;
+	constexpr unsigned SRV_HEAP_SIZE = 65536;
+	constexpr unsigned SAMPLER_HEAP_SIZE = 2048;
 
 	uint64_t Align_Up(uint64_t value, uint64_t alignment)
 	{
@@ -247,41 +247,6 @@ D3D12_GPU_DESCRIPTOR_HANDLE D3D12DescriptorHeapClass::GPU(unsigned index) const
 }
 
 /***********************************************************************************************
-** D3D12FrameDescriptorRingClass
-***********************************************************************************************/
-
-bool D3D12FrameDescriptorRingClass::Init(ID3D12Device *device, D3D12_DESCRIPTOR_HEAP_TYPE type, unsigned count_per_frame, unsigned frame_count)
-{
-	PerFrame = count_per_frame;
-	SliceStart = 0;
-	Used = 0;
-	return Storage.Init(device, type, count_per_frame * frame_count, true);
-}
-
-void D3D12FrameDescriptorRingClass::Shutdown()
-{
-	Storage.Shutdown();
-}
-
-void D3D12FrameDescriptorRingClass::Begin_Frame(unsigned frame_slot)
-{
-	SliceStart = frame_slot * PerFrame;
-	Used = 0;
-}
-
-bool D3D12FrameDescriptorRingClass::Allocate(unsigned count, D3D12_CPU_DESCRIPTOR_HANDLE &cpu, D3D12_GPU_DESCRIPTOR_HANDLE &gpu)
-{
-	if (Used + count > PerFrame) {
-		WWRELEASE_WARNING(("D3D12: per-frame descriptor ring exhausted\n"));
-		return false;
-	}
-	cpu = Storage.CPU(SliceStart + Used);
-	gpu = Storage.GPU(SliceStart + Used);
-	Used += count;
-	return true;
-}
-
-/***********************************************************************************************
 ** D3D12DeviceClass
 ***********************************************************************************************/
 
@@ -304,8 +269,8 @@ bool D3D12DeviceClass::Init(const D3D12DeviceInitParams &params)
 
 	if (!RTVHeap.Init(DeviceObject.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, RTV_HEAP_SIZE, false) ||
 		!DSVHeap.Init(DeviceObject.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, DSV_HEAP_SIZE, false) ||
-		!SRVStagingHeap.Init(DeviceObject.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, SRV_STAGING_HEAP_SIZE, false) ||
-		!SRVRing.Init(DeviceObject.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, SRV_RING_PER_FRAME, FRAMES_IN_FLIGHT) ||
+		!SRVHeap.Init(DeviceObject.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, SRV_HEAP_SIZE, true) ||
+		!SamplerHeap.Init(DeviceObject.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, SAMPLER_HEAP_SIZE, true) ||
 		!UploadRing.Init(DeviceObject.Get(), FRAMES_IN_FLIGHT)) {
 		Shutdown();
 		return false;
@@ -324,7 +289,6 @@ bool D3D12DeviceClass::Init(const D3D12DeviceInitParams &params)
 	FrameSlot = 0;
 	FrameNumber = 0;
 	UploadRing.Begin_Frame(FrameSlot);
-	SRVRing.Begin_Frame(FrameSlot);
 	Reopen_Command_List();
 
 	char name[128] = {};
@@ -357,7 +321,10 @@ bool D3D12DeviceClass::Create_Device(const D3D12DeviceInitParams &params)
 		}
 	}
 
-	if (params.UseWarp) {
+	if (params.Adapter != nullptr) {
+		AdapterObject = params.Adapter;
+		D3D12_CHECK(D3D12CreateDevice(AdapterObject.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&DeviceObject)), "D3D12CreateDevice");
+	} else if (params.UseWarp) {
 		D3D12_CHECK(Factory->EnumWarpAdapter(IID_PPV_ARGS(&AdapterObject)), "EnumWarpAdapter");
 		D3D12_CHECK(D3D12CreateDevice(AdapterObject.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&DeviceObject)), "D3D12CreateDevice (WARP)");
 	} else {
@@ -520,8 +487,8 @@ void D3D12DeviceClass::Shutdown()
 	Release_Size_Dependent_Resources();
 
 	UploadRing.Shutdown();
-	SRVRing.Shutdown();
-	SRVStagingHeap.Shutdown();
+	SamplerHeap.Shutdown();
+	SRVHeap.Shutdown();
 	DSVHeap.Shutdown();
 	RTVHeap.Shutdown();
 
@@ -655,7 +622,6 @@ bool D3D12DeviceClass::End_Frame(bool present, unsigned sync_interval)
 
 	Allocators[FrameSlot]->Reset();
 	UploadRing.Begin_Frame(FrameSlot);
-	SRVRing.Begin_Frame(FrameSlot);
 	Release_Deferred(false);
 	Reopen_Command_List();
 	return !DeviceLost;
@@ -677,8 +643,8 @@ bool D3D12DeviceClass::Submit()
 void D3D12DeviceClass::Reopen_Command_List()
 {
 	CommandList->Reset(Allocators[FrameSlot].Get(), nullptr);
-	ID3D12DescriptorHeap *heaps[] = { SRVRing.Heap() };
-	CommandList->SetDescriptorHeaps(1, heaps);
+	ID3D12DescriptorHeap *heaps[] = { SRVHeap.Heap(), SamplerHeap.Heap() };
+	CommandList->SetDescriptorHeaps(2, heaps);
 }
 
 void D3D12DeviceClass::Wait_For_Fence(uint64_t value)
@@ -713,7 +679,14 @@ void D3D12DeviceClass::Flush()
 void D3D12DeviceClass::Defer_Release(ComPtr<ID3D12Resource> resource)
 {
 	if (resource) {
-		DeferredReleases.push_back({ NextFenceValue, std::move(resource) });
+		DeferredReleases.push_back({ NextFenceValue, std::move(resource), UINT32_MAX });
+	}
+}
+
+void D3D12DeviceClass::Defer_Free_SRV(unsigned index)
+{
+	if (index != UINT32_MAX) {
+		DeferredReleases.push_back({ NextFenceValue, nullptr, index });
 	}
 }
 
@@ -725,7 +698,15 @@ void D3D12DeviceClass::Release_Deferred(bool all)
 	const uint64_t completed = (all || !Fence) ? UINT64_MAX : Fence->GetCompletedValue();
 	DeferredReleases.erase(
 		std::remove_if(DeferredReleases.begin(), DeferredReleases.end(),
-			[completed](const DeferredRelease &entry) { return entry.FenceValue <= completed; }),
+			[this, completed](const DeferredRelease &entry) {
+				if (entry.FenceValue > completed) {
+					return false;
+				}
+				if (entry.SRV != UINT32_MAX) {
+					SRVHeap.Free(entry.SRV);
+				}
+				return true;
+			}),
 		DeferredReleases.end());
 }
 

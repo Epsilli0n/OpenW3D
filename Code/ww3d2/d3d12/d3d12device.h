@@ -118,33 +118,10 @@ private:
 	std::vector<unsigned>			FreeList;
 };
 
-/*
-** Shader-visible descriptor range that is reset every frame slot. Each frame slot owns
-** an equal, contiguous slice of the heap.
-*/
-class D3D12FrameDescriptorRingClass
-{
-public:
-	bool			Init(ID3D12Device *device, D3D12_DESCRIPTOR_HEAP_TYPE type, unsigned count_per_frame, unsigned frame_count);
-	void			Shutdown();
-	void			Begin_Frame(unsigned frame_slot);
-
-	// Reserve 'count' contiguous descriptors. Returns false if the slice is exhausted.
-	bool			Allocate(unsigned count, D3D12_CPU_DESCRIPTOR_HANDLE &cpu, D3D12_GPU_DESCRIPTOR_HANDLE &gpu);
-
-	ID3D12DescriptorHeap *	Heap() const { return Storage.Heap(); }
-	unsigned						Increment() const { return Storage.Increment(); }
-
-private:
-	D3D12DescriptorHeapClass	Storage;
-	unsigned							PerFrame = 0;
-	unsigned							SliceStart = 0;
-	unsigned							Used = 0;
-};
-
 struct D3D12DeviceInitParams
 {
 	HWND				Window = nullptr;
+	IDXGIAdapter1 *	Adapter = nullptr;		// Use this adapter; null picks the high-performance GPU.
 	unsigned			Width = 0;
 	unsigned			Height = 0;
 	bool				UseWarp = false;			// Software adapter, for tests and CI.
@@ -208,14 +185,20 @@ public:
 	D3D12UploadRingClass &				Upload() { return UploadRing; }
 	D3D12DescriptorHeapClass &			RTV_Heap() { return RTVHeap; }
 	D3D12DescriptorHeapClass &			DSV_Heap() { return DSVHeap; }
-	D3D12DescriptorHeapClass &			SRV_Staging_Heap() { return SRVStagingHeap; }
-	D3D12FrameDescriptorRingClass &	SRV_Ring() { return SRVRing; }
+	// Shader-visible heaps; descriptors live as long as their resource.
+	D3D12DescriptorHeapClass &			SRV_Heap() { return SRVHeap; }
+	D3D12DescriptorHeapClass &			Sampler_Heap() { return SamplerHeap; }
 
 	D3D12_CPU_DESCRIPTOR_HANDLE		Back_Buffer_RTV() const;
 	D3D12_CPU_DESCRIPTOR_HANDLE		Depth_DSV() const;
 
 	// Keep 'resource' alive until the GPU has finished the work recorded so far.
 	void									Defer_Release(ComPtr<ID3D12Resource> resource);
+	// Return an SRV heap slot once the GPU has finished the work recorded so far.
+	void									Defer_Free_SRV(unsigned index);
+
+	// True after a device removal; the device cannot be used any more.
+	bool									Is_Lost() const { return DeviceLost; }
 
 private:
 	bool			Create_Device(const D3D12DeviceInitParams &params);
@@ -248,14 +231,15 @@ private:
 
 	D3D12DescriptorHeapClass				RTVHeap;
 	D3D12DescriptorHeapClass				DSVHeap;
-	D3D12DescriptorHeapClass				SRVStagingHeap;
-	D3D12FrameDescriptorRingClass			SRVRing;
+	D3D12DescriptorHeapClass				SRVHeap;
+	D3D12DescriptorHeapClass				SamplerHeap;
 	D3D12UploadRingClass						UploadRing;
 
 	struct DeferredRelease
 	{
 		uint64_t						FenceValue;
 		ComPtr<ID3D12Resource>	Resource;
+		unsigned						SRV;		// UINT32_MAX unless this frees an SRV slot
 	};
 	std::vector<DeferredRelease>			DeferredReleases;
 
