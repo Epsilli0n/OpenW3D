@@ -437,7 +437,7 @@ bool DX8Wrapper::Create_Device(void)
 		caps,
 		D3DFormat_To_WW3DFormat(_PresentParameters.BackBufferFormat),
 		CurrentAdapterIdentifier);
-	if (dx8_caps.Get_Vendor()==DX8Caps::VENDOR_ATI) {
+	if (RendererType==W3DRendererType::D3D9 && dx8_caps.Get_Vendor()==DX8Caps::VENDOR_ATI) {
 		_PresentParameters.Flags=D3DPRESENTFLAG_LOCKABLE_BACKBUFFER;
 	}
 
@@ -1456,7 +1456,7 @@ void DX8Wrapper::End_Scene(bool flip_frames)
 	if (flip_frames) {
 		// JANI HACK! Some objects flicker on ATI Radeons. This can be fixed by locking the back buffer before flipping.
 		// Remember that for this to work the back buffers need to have been create as lockable!
-		if (Get_Current_Caps()->Get_Vendor()==DX8Caps::VENDOR_ATI) {
+		if (RendererType==W3DRendererType::D3D9 && Get_Current_Caps()->Get_Vendor()==DX8Caps::VENDOR_ATI) {
 			W3DSurface * bb;
 			DX8CALL(GetBackBuffer(0,0,D3DBACKBUFFER_TYPE_MONO,&bb));
 			D3DLOCKED_RECT rect;
