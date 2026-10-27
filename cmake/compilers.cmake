@@ -8,6 +8,12 @@ if (DEFINED MSVC_VERSION)
     message(STATUS "MSVC_VERSION: ${MSVC_VERSION}")
 endif()
 
+# MSVC builds require the Visual Studio 2026 toolset (MSVC 19.50 / v145) or newer.
+# clang-cl reports its own version, so only check the Microsoft compiler.
+if(MSVC AND CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" AND MSVC_VERSION LESS 1950)
+    message(FATAL_ERROR "OpenW3D requires Visual Studio 2026 (MSVC 19.50) or newer; found MSVC_VERSION ${MSVC_VERSION}.")
+endif()
+
 # Make release builds have debug information too.
 if(MSVC)
     # Create PDB for Release as long as debug info was generated during compile.
