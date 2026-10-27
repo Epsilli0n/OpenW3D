@@ -228,6 +228,8 @@ if(W3D_RENDERER_D3D12)
     list(APPEND WW3D2_SRC
         d3d12/d3d12device.cpp
         d3d12/d3d12device.h
+        d3d12/d3d12formats.cpp
+        d3d12/d3d12formats.h
     )
 endif()
 
@@ -349,5 +351,13 @@ if(BUILD_TESTING AND WIN32)
             ww3d2
         )
         add_test(NAME ww3d2_d3d12_device_tests COMMAND ww3d2_d3d12_device_tests)
+
+        add_executable(ww3d2_d3d12_format_tests
+            tests/D3D12FormatTests.cpp
+            d3d12/d3d12formats.cpp
+        )
+        target_include_directories(ww3d2_d3d12_format_tests PRIVATE d3d12)
+        target_link_libraries(ww3d2_d3d12_format_tests PRIVATE wwcommon)
+        add_test(NAME ww3d2_d3d12_format_tests COMMAND ww3d2_d3d12_format_tests)
     endif()
 endif()
