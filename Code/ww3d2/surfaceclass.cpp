@@ -54,7 +54,7 @@
 #include "vector2i.h"
 #include "colorspace.h"
 #include "bound.h"
-#include <d3dx9.h>
+#include "w3drender.h"
 #include <algorithm>
 
 /***********************************************************************************************
@@ -246,7 +246,7 @@ SurfaceClass::SurfaceClass(const char *filename):
 	SurfaceFormat=desc.Format;
 }
 
-SurfaceClass::SurfaceClass(IDirect3DSurface9 *d3d_surface)	:
+SurfaceClass::SurfaceClass(W3DSurface *d3d_surface)	:
 	D3DSurface (nullptr)
 {
 	Attach (d3d_surface);
@@ -519,7 +519,7 @@ void SurfaceClass::Copy(
 		if (dest.right>int(sd.Width)) dest.right=int(sd.Width);
 		if (dest.bottom>int(sd.Height)) dest.bottom=int(sd.Height);
 
-		DX8_ErrorCode(D3DXLoadSurfaceFromSurface(D3DSurface,nullptr,&dest,other->D3DSurface,nullptr,&src,D3DX_FILTER_NONE,0));
+		DX8_ErrorCode(DX8Wrapper::_Get_D3D_Device8()->Load_Surface_From_Surface(D3DSurface,&dest,other->D3DSurface,&src,W3D_FILTER_NONE));
 	}
 }
 
@@ -561,7 +561,7 @@ void SurfaceClass::Stretch_Copy(
 	dest.top=dsty;
 	dest.bottom=dsty+dstheight;
 
-	DX8_ErrorCode(D3DXLoadSurfaceFromSurface(D3DSurface,nullptr,&dest,other->D3DSurface,nullptr,&src,D3DX_FILTER_TRIANGLE ,0));
+	DX8_ErrorCode(DX8Wrapper::_Get_D3D_Device8()->Load_Surface_From_Surface(D3DSurface,&dest,other->D3DSurface,&src,W3D_FILTER_TRIANGLE));
 }
 
 /***********************************************************************************************
@@ -760,7 +760,7 @@ void SurfaceClass::Get_Pixel(Vector3 &rgb, int x,int y)
  * HISTORY:                                                                                    *
  *   3/27/2001  pds : Created.                                                                 *
  *=============================================================================================*/
-void SurfaceClass::Attach (IDirect3DSurface9 *surface)
+void SurfaceClass::Attach (W3DSurface *surface)
 {
 	Detach ();
 	D3DSurface = surface;

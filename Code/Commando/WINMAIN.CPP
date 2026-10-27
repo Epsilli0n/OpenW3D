@@ -272,10 +272,6 @@ static bool Graphics_Settings_Trouble_Shooting()
 	return true;
 }
 
-typedef IDirect3D9* (WINAPI *Direct3DCreate9Type) (UINT SDKVersion);
-static Direct3DCreate9Type	Direct3DCreate9Ptr = nullptr;
-extern const char *Get_D3D9_Object_Name();
-static SharedObject *D3D9Lib = nullptr;
 
 static bool Video_Card_Driver_Check()
 {
@@ -285,7 +281,7 @@ static bool Video_Card_Driver_Check()
 	int disabled=render_registry.Get_Int( "DriverVersionCheckDisabled" );
 	if (disabled>=87) return true;
 
-	IDirect3D9* d3d=nullptr;
+	W3DRenderSystem* d3d=nullptr;
 	D3DCAPS9 tmp_caps;
 	const D3DCAPS9* d3dcaps=nullptr;
 	D3DADAPTER_IDENTIFIER9 adapter_id;
@@ -293,23 +289,8 @@ static bool Video_Card_Driver_Check()
 	// Init D3D
 	Init_D3D_To_WW3_Conversion();
 
-	D3D9Lib = SharedObject::LoadObject(Get_D3D9_Object_Name());
-
-	if (D3D9Lib != nullptr) {
-		Direct3DCreate9Ptr = reinterpret_cast<Direct3DCreate9Type>(D3D9Lib->LoadFunction("Direct3DCreate9"));
-		if (Direct3DCreate9Ptr) {
-			d3d=Direct3DCreate9Ptr(D3D_SDK_VERSION);		// TODO: handle failure cases...
-			if (!d3d) {
-				delete D3D9Lib;
-				D3D9Lib = nullptr;
-				return true;
-			}
-		} else {
-			delete D3D9Lib;
-			D3D9Lib = nullptr;
-			return true;
-		}
-	} else {
+	d3d=W3D_Create_Render_System(DX8Wrapper::Get_Renderer());
+	if (!d3d) {
 		return true;
 	}
 
@@ -343,7 +324,6 @@ static bool Video_Card_Driver_Check()
 		D3DDEVTYPE_HAL,
 		&tmp_caps))) {
 		d3d->Release();
-		delete D3D9Lib;
 		return true;
 	}
 
@@ -353,8 +333,6 @@ static bool Video_Card_Driver_Check()
 		0/*D3DENUM_WHQL_LEVEL*/,
 		&adapter_id))) {
 		d3d->Release();
-		delete D3D9Lib;
-		D3D9Lib = nullptr;
 		return true;
 	}
 
@@ -364,8 +342,6 @@ static bool Video_Card_Driver_Check()
 	DX8Caps::DriverVersionStatusType status=caps.Get_Driver_Version_Status();
 
 	d3d->Release();
-	delete D3D9Lib;
-	D3D9Lib = nullptr;
 
 	switch (status) {
 	default:

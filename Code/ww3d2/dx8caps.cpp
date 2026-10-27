@@ -40,6 +40,7 @@
 #include "dx8caps.h"
 #include "dx8wrapper.h"
 #include "formconv.h"
+#include "d3d9/w3drender_d3d9.h"
 #include <windows.h>
 #include <mmsystem.h>
 
@@ -456,8 +457,8 @@ DX8Caps::DeviceTypeIntel DX8Caps::Get_Intel_Device(unsigned device_id)
 }
 
 DX8Caps::DX8Caps(
-	IDirect3D9* direct3d,
-	IDirect3DDevice9* D3DDevice,
+	W3DRenderSystem* direct3d,
+	W3DRenderDevice* D3DDevice,
 	WW3DFormat display_format,
 	const D3DADAPTER_IDENTIFIER9& adapter_id)
 	:
@@ -470,7 +471,7 @@ DX8Caps::DX8Caps(
 }
 
 DX8Caps::DX8Caps(
-	IDirect3D9* direct3d,
+	W3DRenderSystem* direct3d,
 	const D3DCAPS9& caps,
 	WW3DFormat display_format,
 	const D3DADAPTER_IDENTIFIER9& adapter_id)
@@ -489,13 +490,35 @@ DX8Caps::DX8Caps(
 	Compute_Caps(display_format,adapter_id);
 }
 
+DX8Caps::DX8Caps(
+	IDirect3D9* direct3d,
+	const D3DCAPS9& caps,
+	WW3DFormat display_format,
+	const D3DADAPTER_IDENTIFIER9& adapter_id)
+	:
+	Direct3D(W3D_Wrap_D3D9_Render_System(direct3d)),
+	Caps(caps),
+	MaxDisplayWidth(0),
+	MaxDisplayHeight(0)
+{
+	SupportTnL=(Caps.DevCaps&D3DDEVCAPS_HWTRANSFORMANDLIGHT)==D3DDEVCAPS_HWTRANSFORMANDLIGHT;
+
+	Compute_Caps(display_format,adapter_id);
+
+	// The render system is only needed while computing the caps.
+	if (Direct3D) {
+		Direct3D->Release();
+		Direct3D=nullptr;
+	}
+}
+
 // ----------------------------------------------------------------------------
 //
 // Init the caps structure
 //
 // ----------------------------------------------------------------------------
 
-void DX8Caps::Init_Caps(IDirect3DDevice9* D3DDevice)
+void DX8Caps::Init_Caps(W3DRenderDevice* D3DDevice)
 {
 	D3DDevice->SetSoftwareVertexProcessing(true);
 	DX8CALL(GetDeviceCaps(&Caps));

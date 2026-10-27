@@ -221,7 +221,7 @@ bool DDSFileClass::Load()
 //
 // ----------------------------------------------------------------------------
 
-void DDSFileClass::Copy_Level_To_Surface(unsigned level,IDirect3DSurface9* d3d_surface)
+void DDSFileClass::Copy_Level_To_Surface(unsigned level,W3DSurface* d3d_surface)
 {
 	WWASSERT(d3d_surface);
 	// Verify that the destination surface size matches the source surface size

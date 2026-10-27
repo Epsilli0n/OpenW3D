@@ -200,7 +200,7 @@ void BINKMovieClass::Render()
 		BinkCopyToBuffer(Bink, TempBuffer, Bink->Width * 2, Bink->Height, 0, 0, BINKSURFACE565|BINKCOPYNOSCALING);
 
 		for (unsigned t = 0; t < TextureCount; ++t) {
-			IDirect3DTexture9* d3d_texture = TextureInfos[t].Texture->Peek_DX8_Texture();
+			W3DTexture* d3d_texture = TextureInfos[t].Texture->Peek_DX8_Texture();
 
 			if (d3d_texture) {
 				unsigned char* cur_tex_ptr = Get_Tex_Address(TempBuffer, TextureInfos[t].TextureLocX,

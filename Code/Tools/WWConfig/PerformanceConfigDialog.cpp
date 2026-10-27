@@ -770,8 +770,10 @@ void AutoConfigSettings()
 	if (video) {
 		WW3D::Set_Texture_Bitdepth(16);
 		render_registry.Set_Int( VALUE_NAME_RENDER_DEVICE_TEXTURE_DEPTH, 16 );
-		d3d=DX8Wrapper::_Get_D3D8();
-		d3d->AddRef();
+		d3d=Direct3DCreate9(D3D_SDK_VERSION);	// DX8Caps only needs it for format checks
+		if (!d3d) {
+			return;
+		}
 		d3dcaps=&video->Get_Current_Caps();
 		adapter_id=video->Get_Current_Adapter_Identifier();
 		if (video->Get_Current_Bit_Depth()==32) {
@@ -1108,8 +1110,10 @@ PerformanceConfigDialogClass::OnShowWindow(BOOL bShow, UINT nStatus)
 		VideoConfigDialogClass* video=VideoConfigDialogClass::Get_Instance();
 		if (video) {
 
-			IDirect3D9* d3d=DX8Wrapper::_Get_D3D8();
-			d3d->AddRef();
+			IDirect3D9* d3d=Direct3DCreate9(D3D_SDK_VERSION);	// DX8Caps only needs it for format checks
+			if (!d3d) {
+				return;
+			}
 			D3DADAPTER_IDENTIFIER9 adapter_id=video->Get_Current_Adapter_Identifier();
 
 			D3DFORMAT display_format;

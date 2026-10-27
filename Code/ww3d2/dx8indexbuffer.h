@@ -50,7 +50,7 @@
 
 class DX8Wrapper;
 class SortingRendererClass;
-struct IDirect3DIndexBuffer9;
+class W3DIndexBuffer;
 class DX8IndexBufferClass;
 class SortingIndexBufferClass;
 
@@ -172,10 +172,10 @@ public:
 	void Copy(unsigned int* indices,unsigned start_index,unsigned index_count);
 	void Copy(unsigned short* indices,unsigned start_index,unsigned index_count);
 
-	inline IDirect3DIndexBuffer9* Get_DX8_Index_Buffer()	{ return index_buffer; }
+	inline W3DIndexBuffer* Get_DX8_Index_Buffer()	{ return index_buffer; }
 
 private:
-	IDirect3DIndexBuffer9*	index_buffer;		// actual dx8 index buffer
+	W3DIndexBuffer*	index_buffer;		// actual dx8 index buffer
 };
 
 

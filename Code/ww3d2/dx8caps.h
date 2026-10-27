@@ -45,7 +45,7 @@
 
 #include "always.h"
 #include "ww3dformat.h"
-#include <d3d9.h>
+#include "w3drender.h"
 
 class DX8Caps
 {
@@ -204,8 +204,10 @@ public:
 	};
 
 
+	DX8Caps(W3DRenderSystem* direct3d, const D3DCAPS9& caps,WW3DFormat display_format, const D3DADAPTER_IDENTIFIER9& adapter_id);
+	DX8Caps(W3DRenderSystem* direct3d, W3DRenderDevice* D3DDevice,WW3DFormat display_format, const D3DADAPTER_IDENTIFIER9& adapter_id);
+	// For tools that enumerate adapters through their own Direct3D 9 interface.
 	DX8Caps(IDirect3D9* direct3d, const D3DCAPS9& caps,WW3DFormat display_format, const D3DADAPTER_IDENTIFIER9& adapter_id);
-	DX8Caps(IDirect3D9* direct3d, IDirect3DDevice9* D3DDevice,WW3DFormat display_format, const D3DADAPTER_IDENTIFIER9& adapter_id);
 
 	void Compute_Caps(WW3DFormat display_format, const D3DADAPTER_IDENTIFIER9& adapter_id);
 	bool Support_TnL() const { return SupportTnL; };
@@ -262,7 +264,7 @@ private:
 	static DeviceTypeS3 Get_S3_Device(unsigned device_id);
 	static DeviceTypeIntel Get_Intel_Device(unsigned device_id);
 
-	void Init_Caps(IDirect3DDevice9* D3DDevice);
+	void Init_Caps(W3DRenderDevice* D3DDevice);
 	void Check_Texture_Format_Support(WW3DFormat display_format,const D3DCAPS9& caps);
 	void Check_Render_To_Texture_Support(WW3DFormat display_format,const D3DCAPS9& caps);
 	void Check_Texture_Compression_Support(const D3DCAPS9& caps);
@@ -295,7 +297,7 @@ private:
 	DriverVersionStatusType DriverVersionStatus;
 	VendorIdType VendorId;
 	StringClass DriverDLL;
-	IDirect3D9* Direct3D;
+	W3DRenderSystem* Direct3D;
 	StringClass CapsLog;
 	StringClass CompactLog;
 };

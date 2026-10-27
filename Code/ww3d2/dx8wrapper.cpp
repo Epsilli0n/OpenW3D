@@ -67,8 +67,6 @@
 #include "thread.h"
 #include <bit>
 #include <stdio.h>
-#include <d3dx9core.h>
-#include "dxerr_compat.h"
 #include "pot.h"
 #include "wwprofile.h"
 #include "ffactory.h"
@@ -91,6 +89,7 @@ const int DEFAULT_TEXTURE_BIT_DEPTH = 16;
 ***********************************************************************************/
 
 static HWND						_Hwnd															= nullptr;
+W3DRendererType						DX8Wrapper::RendererType						= W3DRendererType::D3D9;
 bool								DX8Wrapper::IsInitted									= false;
 bool								DX8Wrapper::_EnableTriangleDraw						= true;
 
@@ -109,18 +108,18 @@ bool								DX8Wrapper::world_identity;
 unsigned							DX8Wrapper::RenderStates[256];
 unsigned							DX8Wrapper::TextureStageStates[MAX_TEXTURE_STAGES][32];
 unsigned							DX8Wrapper::TextureSamplerStates[MAX_TEXTURE_STAGES][14];
-IDirect3DBaseTexture9 *		DX8Wrapper::Textures[MAX_TEXTURE_STAGES];
+W3DBaseTexture *		DX8Wrapper::Textures[MAX_TEXTURE_STAGES];
 RenderStateStruct				DX8Wrapper::render_state;
 unsigned							DX8Wrapper::render_state_changed;
 
 bool								DX8Wrapper::FogEnable									= false;
 D3DCOLOR							DX8Wrapper::FogColor										= 0;
 
-IDirect3D9 *					DX8Wrapper::D3DInterface								= nullptr;
-IDirect3DDevice9 *			DX8Wrapper::D3DDevice									= nullptr;
-IDirect3DSurface9 *			DX8Wrapper::CurrentRenderTarget						= nullptr;
-IDirect3DSurface9 *			DX8Wrapper::DefaultRenderTarget						= nullptr;
-IDirect3DSurface9 *			DX8Wrapper::DefaultDepthBuffer						= nullptr;
+W3DRenderSystem *					DX8Wrapper::D3DInterface								= nullptr;
+W3DRenderDevice *			DX8Wrapper::D3DDevice									= nullptr;
+W3DSurface *			DX8Wrapper::CurrentRenderTarget						= nullptr;
+W3DSurface *			DX8Wrapper::DefaultRenderTarget						= nullptr;
+W3DSurface *			DX8Wrapper::DefaultDepthBuffer						= nullptr;
 bool								DX8Wrapper::IsRenderToTexture							= false;
 
 unsigned							DX8Wrapper::matrix_changes								= 0;
@@ -168,33 +167,15 @@ static DynamicVectorClass<StringClass>					_RenderDeviceShortNameTable;
 static DynamicVectorClass<RenderDeviceDescClass>	_RenderDeviceDescriptionTable;
 
 
-typedef IDirect3D9* (WINAPI *Direct3DCreate8Type) (UINT SDKVersion);
-Direct3DCreate8Type	Direct3DCreate8Ptr = nullptr;
-SharedObject *D3D9Lib = nullptr;
-
 /***********************************************************************************
 **
 ** DX8Wrapper Implementation
 **
 ***********************************************************************************/
 
-const char *Get_D3D9_Object_Name()
-{
-	// FIXME: support overriding object using config (args, ini, register, envvar)
-#ifdef _WIN32
-	return "d3d9.dll";
-#elif defined (__ELF__)
-	return "libdxvk_d3d9.so.0";
-#elif defined (__MACH__)
-	return "libdxvk_d3d9.0.dylib";
-#else
-	static_assert(false, "Unknown d3d9 name");
-#endif
-}
-
 void Log_DX8_ErrorCode(HRESULT res)
 {
-	const char *error_string = DXGetErrorStringA(res);
+	const char *error_string = W3D_Render_Error_String(res);
 
 	if (error_string != nullptr) {
 		WWDEBUG_SAY(("%s", error_string));
@@ -205,7 +186,7 @@ void Log_DX8_ErrorCode(HRESULT res)
 
 void Non_Fatal_Log_DX8_ErrorCode(HRESULT res,[[maybe_unused]] const char * file,[[maybe_unused]] int line)
 {
-	const char *error_string = DXGetErrorStringA(res);
+	const char *error_string = W3D_Render_Error_String(res);
 
 	if (error_string != nullptr) {
 		WWDEBUG_SAY(("DX8 Error: %s, File: %s, Line: %d\r\n",error_string,file,line));
@@ -254,38 +235,31 @@ bool DX8Wrapper::Init(void * hwnd, bool lite)
 	Invalidate_Cached_Render_States();
 
 	if (!lite) {
-		D3D9Lib = SharedObject::LoadObject(Get_D3D9_Object_Name());
+/*
+** Create the render system for the selected backend
+*/
+D3DInterface = W3D_Create_Render_System(RendererType);
+if (D3DInterface == nullptr) {
+WWRELEASE_WARNING(("DX8Wrapper: renderer backend %d is unavailable\n", int(RendererType)));
+return(false);
+}
+WWRELEASE_SAY(("DX8Wrapper: using the %s renderer\n", D3DInterface->Get_Backend_Name()));
+IsInitted = true;
 
-		if (D3D9Lib == nullptr) return false;
-
-		Direct3DCreate8Ptr = reinterpret_cast<Direct3DCreate8Type>(D3D9Lib->LoadFunction("Direct3DCreate9"));
-		if (Direct3DCreate8Ptr) {
-
-			/*
-			** Create the D3D interface object
-			*/
-			WWDEBUG_SAY(("Create Direct3D8\n"));
-			D3DInterface = Direct3DCreate8Ptr(D3D_SDK_VERSION);		// TODO: handle failure cases...
-			if (D3DInterface == nullptr) {
-				return(false);
-			}
-			IsInitted = true;
-
-			/*
-			** Enumerate the available devices
-			*/
-			WWDEBUG_SAY(("Enumerate devices\n"));
-			Enumerate_Devices();
-			WWDEBUG_SAY(("DX8Wrapper Init completed\n"));
-		}
-	}
+/*
+** Enumerate the available devices
+*/
+WWDEBUG_SAY(("Enumerate devices\n"));
+Enumerate_Devices();
+WWDEBUG_SAY(("DX8Wrapper Init completed\n"));
+}
 	return(true);
 }
 
 void DX8Wrapper::Shutdown(void)
 {
 	if (D3DDevice) {
-		Set_Render_Target ((IDirect3DSurface9 *)nullptr);
+		Set_Render_Target ((W3DSurface *)nullptr);
 
 		// If in full screen, reset device to windowed mode before releasing it. This is an attempt to
 		// fix some random bugs and crashes on some devices.
@@ -324,11 +298,6 @@ void DX8Wrapper::Shutdown(void)
 	_RenderDeviceNameTable.Delete_All();
 	_RenderDeviceShortNameTable.Delete_All();
 	_RenderDeviceDescriptionTable.Delete_All();
-
-	if (D3D9Lib) {
-		delete D3D9Lib;
-		D3D9Lib = nullptr;
-	}
 
 	IsInitted = false;
 }
@@ -1488,7 +1457,7 @@ void DX8Wrapper::End_Scene(bool flip_frames)
 		// JANI HACK! Some objects flicker on ATI Radeons. This can be fixed by locking the back buffer before flipping.
 		// Remember that for this to work the back buffers need to have been create as lockable!
 		if (Get_Current_Caps()->Get_Vendor()==DX8Caps::VENDOR_ATI) {
-			IDirect3DSurface9 * bb;
+			W3DSurface * bb;
 			DX8CALL(GetBackBuffer(0,0,D3DBACKBUFFER_TYPE_MONO,&bb));
 			D3DLOCKED_RECT rect;
 			HRESULT res=bb->LockRect(
@@ -2093,7 +2062,7 @@ void DX8Wrapper::Apply_Render_State_Changes()
 	render_state_changed&=((unsigned)WORLD_IDENTITY|(unsigned)VIEW_IDENTITY);
 }
 
-IDirect3DTexture9 * DX8Wrapper::_Create_DX8_Texture(
+W3DTexture * DX8Wrapper::_Create_DX8_Texture(
 	unsigned int width,
 	unsigned int height,
 	WW3DFormat format,
@@ -2103,7 +2072,7 @@ IDirect3DTexture9 * DX8Wrapper::_Create_DX8_Texture(
 {
 	DX8_THREAD_ASSERT();
 	DX8_Assert();
-	IDirect3DTexture9 *texture = nullptr;
+	W3DTexture *texture = nullptr;
 
 	// Paletted textures not supported!
 	WWASSERT(format!=WW3D_FORMAT_P8);
@@ -2114,8 +2083,7 @@ IDirect3DTexture9 * DX8Wrapper::_Create_DX8_Texture(
 	// Render target may return NOTAVAILABLE, in
 	// which case we return nullptr.
 	if (rendertarget) {
-		HRESULT ret=D3DXCreateTexture(
-			DX8Wrapper::_Get_D3D_Device8(),
+		HRESULT ret=DX8Wrapper::_Get_D3D_Device8()->Create_Texture(
 			width,
 			height,
 			mip_level_count,
@@ -2138,8 +2106,7 @@ IDirect3DTexture9 * DX8Wrapper::_Create_DX8_Texture(
 			// Invalidate the mesh cache
 			WW3D::_Invalidate_Mesh_Cache();
 
-			ret=D3DXCreateTexture(
-				DX8Wrapper::_Get_D3D_Device8(),
+			ret=DX8Wrapper::_Get_D3D_Device8()->Create_Texture(
 				width,
 				height,
 				mip_level_count,
@@ -2169,8 +2136,7 @@ IDirect3DTexture9 * DX8Wrapper::_Create_DX8_Texture(
 	// We should never run out of video memory when allocating a non-rendertarget texture.
 	// However, it seems to happen sometimes when there are a lot of textures in memory and so
 	// if it happens we'll release assets and try again (anything is better than crashing).
-	unsigned ret=D3DXCreateTexture(
-		DX8Wrapper::_Get_D3D_Device8(),
+	unsigned ret=DX8Wrapper::_Get_D3D_Device8()->Create_Texture(
 		width,
 		height,
 		mip_level_count,
@@ -2188,8 +2154,7 @@ IDirect3DTexture9 * DX8Wrapper::_Create_DX8_Texture(
 		// Invalidate the mesh cache
 		WW3D::_Invalidate_Mesh_Cache();
 
-		ret=D3DXCreateTexture(
-			DX8Wrapper::_Get_D3D_Device8(),
+		ret=DX8Wrapper::_Get_D3D_Device8()->Create_Texture(
 			width,
 			height,
 			mip_level_count,
@@ -2212,56 +2177,13 @@ IDirect3DTexture9 * DX8Wrapper::_Create_DX8_Texture(
 	return texture;
 }
 
-IDirect3DTexture9 * DX8Wrapper::_Create_DX8_Texture(
-	const char *filename,
+W3DTexture * DX8Wrapper::_Create_DX8_Texture(
+	W3DSurface *surface,
 	TextureClass::MipCountType mip_level_count)
 {
 	DX8_THREAD_ASSERT();
 	DX8_Assert();
-	IDirect3DTexture9 *texture = nullptr;
-
-	// NOTE: If the original image format is not supported as a texture format, it will
-	// automatically be converted to an appropriate format.
-	// NOTE: It is possible to get the size and format of the original image file from this
-	// function as well, so if we later want to second-guess D3DX's format conversion decisions
-	// we can do so after this function is called..
-	unsigned result = D3DXCreateTextureFromFileExA(
-		_Get_D3D_Device8(),
-		filename,
-		D3DX_DEFAULT,
-		D3DX_DEFAULT,
-		mip_level_count,//create_mipmaps ? 0 : 1,
-		0,
-		D3DFMT_UNKNOWN,
-		D3DPOOL_MANAGED,
-		D3DX_FILTER_BOX,
-		D3DX_FILTER_BOX,
-		0,
-		nullptr,
-		nullptr,
-		&texture);
-
-	if (result != D3D_OK) {
-		return MissingTexture::_Get_Missing_Texture();
-	}
-
-	// Make sure texture wasn't paletted!
-	D3DSURFACE_DESC desc;
-	texture->GetLevelDesc(0,&desc);
-	if (desc.Format==D3DFMT_P8) {
-		texture->Release();
-		return MissingTexture::_Get_Missing_Texture();
-	}
-	return texture;
-}
-
-IDirect3DTexture9 * DX8Wrapper::_Create_DX8_Texture(
-	IDirect3DSurface9 *surface,
-	TextureClass::MipCountType mip_level_count)
-{
-	DX8_THREAD_ASSERT();
-	DX8_Assert();
-	IDirect3DTexture9 *texture = nullptr;
+	W3DTexture *texture = nullptr;
 
 	D3DSURFACE_DESC surface_desc;
 	memset(&surface_desc, 0, sizeof(D3DSURFACE_DESC));
@@ -2273,26 +2195,26 @@ IDirect3DTexture9 * DX8Wrapper::_Create_DX8_Texture(
 	texture = _Create_DX8_Texture(surface_desc.Width, surface_desc.Height, format, mip_level_count);
 
 	// Copy the surface to the texture
-	IDirect3DSurface9 *tex_surface = nullptr;
+	W3DSurface *tex_surface = nullptr;
 	texture->GetSurfaceLevel(0, &tex_surface);
-	DX8_ErrorCode(D3DXLoadSurfaceFromSurface(tex_surface, nullptr, nullptr, surface, nullptr, nullptr, D3DX_FILTER_BOX, 0));
+	DX8_ErrorCode(_Get_D3D_Device8()->Load_Surface_From_Surface(tex_surface, nullptr, surface, nullptr, W3D_FILTER_BOX));
 	tex_surface->Release();
 
 	// Create mipmaps if needed
 	if (mip_level_count!=TextureClass::MIP_LEVELS_1) {
-		DX8_ErrorCode(D3DXFilterTexture(texture, nullptr, 0, D3DX_FILTER_BOX));
+		DX8_ErrorCode(_Get_D3D_Device8()->Filter_Texture(texture, W3D_FILTER_BOX));
 	}
 
 	return texture;
 
 }
 
-IDirect3DSurface9 * DX8Wrapper::_Create_DX8_Surface(unsigned int width, unsigned int height, D3DPOOL pool, WW3DFormat format)
+W3DSurface * DX8Wrapper::_Create_DX8_Surface(unsigned int width, unsigned int height, D3DPOOL pool, WW3DFormat format)
 {
 	DX8_THREAD_ASSERT();
 	DX8_Assert();
 
-	IDirect3DSurface9 *surface = nullptr;
+	W3DSurface *surface = nullptr;
 
 	// Paletted surfaces not supported!
 	WWASSERT(format!=WW3D_FORMAT_P8);
@@ -2302,7 +2224,7 @@ IDirect3DSurface9 * DX8Wrapper::_Create_DX8_Surface(unsigned int width, unsigned
 	return surface;
 }
 
-IDirect3DSurface9 * DX8Wrapper::_Create_DX8_Surface(const char *filename_)
+W3DSurface * DX8Wrapper::_Create_DX8_Surface(const char *filename_)
 {
 	DX8_THREAD_ASSERT();
 	DX8_Assert();
@@ -2316,7 +2238,7 @@ IDirect3DSurface9 * DX8Wrapper::_Create_DX8_Surface(const char *filename_)
 	// the file data and use D3DXLoadSurfaceFromFile. This is a horrible hack, but it saves us
 	// having to write file loaders. Will fix this when D3DX provides us with the right functions.
 	// Create a surface the size of the file image data
-	IDirect3DSurface9 *surface = nullptr;
+	W3DSurface *surface = nullptr;
 
 	{
 		file_auto_ptr myfile(_TheFileFactory,filename_);
@@ -2477,14 +2399,14 @@ void DX8Wrapper::Set_Light_Environment(LightEnvironmentClass* light_env)
 */
 }
 
-IDirect3DSurface9 * DX8Wrapper::_Get_DX8_Front_Buffer()
+W3DSurface * DX8Wrapper::_Get_DX8_Front_Buffer()
 {
 	DX8_THREAD_ASSERT();
 	D3DDISPLAYMODE mode;
 
 	DX8CALL(GetDisplayMode(0,&mode));
 
-	IDirect3DSurface9 * fb=nullptr;
+	W3DSurface * fb=nullptr;
 
 	DX8CALL(CreateOffscreenPlainSurface(mode.Width,mode.Height,D3DFMT_A8R8G8B8,D3DPOOL_SCRATCH,&fb,nullptr));
 
@@ -2496,7 +2418,7 @@ SurfaceClass * DX8Wrapper::_Get_DX8_Back_Buffer(unsigned int num)
 {
 	DX8_THREAD_ASSERT();
 
-	IDirect3DSurface9 * bb;
+	W3DSurface * bb;
 	SurfaceClass *surf=nullptr;
 	DX8CALL(GetBackBuffer(0,num,D3DBACKBUFFER_TYPE_MONO,&bb));
 	if (bb)
@@ -2568,7 +2490,7 @@ void
 DX8Wrapper::Set_Render_Target (TextureClass * texture)
 {
 	WWASSERT(texture != nullptr);
-	IDirect3DSurface9 * d3d_surf = texture->Get_D3D_Surface_Level();
+	W3DSurface * d3d_surf = texture->Get_D3D_Surface_Level();
 	WWASSERT(d3d_surf != nullptr);
 	Set_Render_Target(d3d_surf);
 	d3d_surf->Release();
@@ -2577,7 +2499,7 @@ DX8Wrapper::Set_Render_Target (TextureClass * texture)
 }
 
 void
-DX8Wrapper::Set_Render_Target(IDirect3DSwapChain9 *swap_chain)
+DX8Wrapper::Set_Render_Target(W3DSwapChain *swap_chain)
 {
 	DX8_THREAD_ASSERT();
 	WWASSERT (swap_chain != nullptr);
@@ -2585,7 +2507,7 @@ DX8Wrapper::Set_Render_Target(IDirect3DSwapChain9 *swap_chain)
 	//
 	//	Get the back buffer for the swap chain
 	//
-	LPDIRECT3DSURFACE9 render_target = nullptr;
+	W3DSurface * render_target = nullptr;
 	swap_chain->GetBackBuffer (0, D3DBACKBUFFER_TYPE_MONO, &render_target);
 
 	//
@@ -2607,7 +2529,7 @@ DX8Wrapper::Set_Render_Target(IDirect3DSwapChain9 *swap_chain)
 }
 
 void
-DX8Wrapper::Set_Render_Target(IDirect3DSurface9 *render_target, bool use_default_depth_buffer)
+DX8Wrapper::Set_Render_Target(W3DSurface *render_target, bool use_default_depth_buffer)
 {
 	DX8_THREAD_ASSERT();
 	DX8_Assert();
@@ -2650,7 +2572,7 @@ DX8Wrapper::Set_Render_Target(IDirect3DSurface9 *render_target, bool use_default
 		//	We'll need the depth buffer later...
 		//
 		if (DefaultDepthBuffer == nullptr) {
-//		IDirect3DSurface9 *depth_buffer = nullptr;
+//		W3DSurface *depth_buffer = nullptr;
 			DX8CALL(GetDepthStencilSurface (&DefaultDepthBuffer));
 		}
 
@@ -2703,7 +2625,7 @@ DX8Wrapper::Set_Render_Target(IDirect3DSurface9 *render_target, bool use_default
 }
 
 
-IDirect3DSwapChain9 *
+W3DSwapChain *
 DX8Wrapper::Create_Additional_Swap_Chain (HWND render_window)
 {
 	DX8_Assert();
@@ -2727,7 +2649,7 @@ DX8Wrapper::Create_Additional_Swap_Chain (HWND render_window)
 	//
 	//	Create the swap chain
 	//
-	IDirect3DSwapChain9 *swap_chain = nullptr;
+	W3DSwapChain *swap_chain = nullptr;
 	DX8CALL(CreateAdditionalSwapChain(&params, &swap_chain));
 	return swap_chain;
 }

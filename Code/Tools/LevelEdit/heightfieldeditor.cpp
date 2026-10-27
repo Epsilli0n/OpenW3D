@@ -279,7 +279,7 @@ HeightfieldEditorClass::Create_Texture_Thumbnail (const char *filename, int widt
 	//
 	//	Load the d3d surface for this texture
 	//
-	IDirect3DSurface9 *d3d_surface = TextureLoader::Load_Surface_Immediate (filename, WW3D_FORMAT_R8G8B8, false);
+	W3DSurface *d3d_surface = TextureLoader::Load_Surface_Immediate (filename, WW3D_FORMAT_R8G8B8, false);
 
 	//
 	//	Get information about the texture

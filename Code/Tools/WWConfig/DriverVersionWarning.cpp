@@ -160,8 +160,10 @@ void CheckDriverVersion()
 
 	VideoConfigDialogClass* video=VideoConfigDialogClass::Get_Instance();
 	if (video) {
-		d3d=DX8Wrapper::_Get_D3D8();
-		d3d->AddRef();
+		d3d=Direct3DCreate9(D3D_SDK_VERSION);	// DX8Caps only needs it for format checks
+		if (!d3d) {
+			return;
+		}
 		d3dcaps=&video->Get_Current_Caps();
 		adapter_id=video->Get_Current_Adapter_Identifier();
 	}

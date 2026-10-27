@@ -328,7 +328,7 @@ ZoneEditDialogClass::Render_View (void)
 		//
 		//	Restore the render target
 		//
-		DX8Wrapper::Set_Render_Target ((LPDIRECT3DSURFACE9)nullptr);
+		DX8Wrapper::Set_Render_Target ((W3DSurface *)nullptr);
 
 		//
 		//	Cleanup

@@ -334,7 +334,7 @@ void FFMpegMovieClass::Render()
 		FrameChanged = false;
 
 		for (unsigned t = 0; t < TextureCount; ++t) {
-			IDirect3DTexture9* d3d_texture = TextureInfos[t].Texture->Peek_DX8_Texture();
+			W3DTexture* d3d_texture = TextureInfos[t].Texture->Peek_DX8_Texture();
 
 			if (d3d_texture) {
 				unsigned w = TextureInfos[t].TextureWidth;

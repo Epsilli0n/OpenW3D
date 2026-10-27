@@ -19,7 +19,7 @@
 #include "missingtexture.h"
 #include "texture.h"
 #include "dx8wrapper.h"
-#include <d3dx9core.h>
+#include "w3drender.h"
 
 static unsigned missing_image_width=128;
 static unsigned missing_image_height=128;
@@ -29,24 +29,24 @@ static unsigned missing_image_run_count=7331;
 extern unsigned char missing_image_run_lengths[];
 extern unsigned missing_image_color_values[];
 
-static IDirect3DTexture9 * _MissingTexture = nullptr;
+static W3DTexture * _MissingTexture = nullptr;
 
-IDirect3DTexture9* MissingTexture::_Get_Missing_Texture()
+W3DTexture* MissingTexture::_Get_Missing_Texture()
 {
 	WWASSERT(_MissingTexture);
 	_MissingTexture->AddRef();
 	return _MissingTexture;
 }
 
-IDirect3DSurface9* MissingTexture::_Create_Missing_Surface()
+W3DSurface* MissingTexture::_Create_Missing_Surface()
 {
-	IDirect3DSurface9 *texture_surface = nullptr;
+	W3DSurface *texture_surface = nullptr;
 	DX8_ErrorCode(_MissingTexture->GetSurfaceLevel(0, &texture_surface));
 	D3DSURFACE_DESC texture_surface_desc;
 	memset(&texture_surface_desc, 0, sizeof(D3DSURFACE_DESC));
 	DX8_ErrorCode(texture_surface->GetDesc(&texture_surface_desc));
 
-	IDirect3DSurface9 *surface = nullptr;
+	W3DSurface *surface = nullptr;
 	DX8CALL(CreateOffscreenPlainSurface(
 		texture_surface_desc.Width,
 		texture_surface_desc.Height,
@@ -63,7 +63,7 @@ void MissingTexture::_Init()
 {
 	WWASSERT(!_MissingTexture);
 
-	IDirect3DTexture9* tex=DX8Wrapper::_Create_DX8_Texture(
+	W3DTexture* tex=DX8Wrapper::_Create_DX8_Texture(
 		missing_image_width,
 		missing_image_height,
 		WW3D_FORMAT_A8R8G8B8,
@@ -105,19 +105,11 @@ void MissingTexture::_Init()
 	DX8_ErrorCode(tex->UnlockRect(0));
 
 	for (unsigned i=1;i<tex->GetLevelCount();++i) {
-		IDirect3DSurface9 *src,*dst;
+		W3DSurface *src,*dst;
 		DX8_ErrorCode(tex->GetSurfaceLevel(i-1,&src));
 		DX8_ErrorCode(tex->GetSurfaceLevel(i,&dst));
 
-		DX8_ErrorCode(D3DXLoadSurfaceFromSurface(
-			dst,
-			nullptr,	// palette
-			nullptr,	// rect
-			src,
-			nullptr,	// palette
-			nullptr,	// rect
-			D3DX_FILTER_BOX,	// box is good for 2:1 filtering
-			0));
+		DX8_ErrorCode(DX8Wrapper::_Get_D3D_Device8()->Load_Surface_From_Surface(dst, nullptr, src, nullptr, W3D_FILTER_BOX));// box is good for 2:1 filtering
 
 		src->Release();
 		dst->Release();

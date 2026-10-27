@@ -50,7 +50,7 @@
 #include "wwstring.h"
 
 class DX8Wrapper;
-struct IDirect3DTexture9;
+class W3DTexture;
 class TextureLoader;
 class LoaderThreadClass;
 class DX8TextureManagerClass;
@@ -138,7 +138,7 @@ class TextureClass : public RefCountClass
 			SurfaceClass *surface,
 			MipCountType mip_level_count=MIP_LEVELS_ALL);
 
-		TextureClass(IDirect3DTexture9* d3d_texture);
+		TextureClass(W3DTexture* d3d_texture);
 
 		virtual ~TextureClass(void);
 
@@ -172,7 +172,7 @@ class TextureClass : public RefCountClass
 
 		// Get the surface of one of the mipmap levels (defaults to highest-resolution one)
 		SurfaceClass *Get_Surface_Level(unsigned int level = 0);
-		IDirect3DSurface9 *Get_D3D_Surface_Level(unsigned int level = 0);
+		W3DSurface *Get_D3D_Surface_Level(unsigned int level = 0);
 
 		// Texture priority affects texture management and caching.
 		unsigned int Get_Priority(void);
@@ -217,7 +217,7 @@ class TextureClass : public RefCountClass
 		// This utility function processes the texture reduction (used during rendering)
 		void Invalidate();
 
-		IDirect3DTexture9 *Peek_DX8_Texture()
+		W3DTexture *Peek_DX8_Texture()
 		{
 			return D3DTexture;
 		}
@@ -254,7 +254,7 @@ class TextureClass : public RefCountClass
 		TxtAddrMode VAddressMode;
 
 		// Direct3D texture object
-		IDirect3DTexture9 *D3DTexture;
+		W3DTexture *D3DTexture;
 		bool Initialized;
 
 		// Name
@@ -301,7 +301,7 @@ private:
 public:
 
 		// Background texture loader will call this when texture has been loaded
-		void Apply_New_Surface(IDirect3DTexture9* tex, bool initialized);	// If the parameter is true, the texture will be flagged as initialised
+		void Apply_New_Surface(W3DTexture* tex, bool initialized);	// If the parameter is true, the texture will be flagged as initialised
 
 };
 

@@ -109,7 +109,7 @@
 #include <cmath>
 #include <cstdio>
 #ifdef _WIN32
-#include <d3dx9tex.h>
+#include "w3drender.h"
 #endif
 #include <limits>
 #include "dx8wrapper.h"
@@ -1326,7 +1326,7 @@ void WW3D::Make_Screen_Shot( const char * filename_base )
 
 	// Lock front buffer and copy
 
-	IDirect3DSurface9 *fb;
+	W3DSurface *fb;
 	fb=DX8Wrapper::_Get_DX8_Front_Buffer();
 	D3DSURFACE_DESC desc;
 	fb->GetDesc(&desc);
@@ -1401,19 +1401,18 @@ int WW3D::Make_Back_Buffer_Screen_Shot( const char * filename_base )
 
 	WWDEBUG_SAY(( "Creating Back Buffer Screen Shot %s\n", filename.Peek_Buffer() ));
 
-	IDirect3DDevice9 *device = DX8Wrapper::_Get_D3D_Device8();
+	W3DRenderDevice *device = DX8Wrapper::_Get_D3D_Device8();
 	if (device == nullptr) {
 		return 0;
 	}
 
-	IDirect3DSurface9 *back_buffer = nullptr;
+	W3DSurface *back_buffer = nullptr;
 	if (FAILED(device->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &back_buffer)) ||
 		back_buffer == nullptr) {
 		return 0;
 	}
 
-	const HRESULT save_result = D3DXSaveSurfaceToFileA(
-		filename.Peek_Buffer(), D3DXIFF_TGA, back_buffer, nullptr, nullptr);
+	const HRESULT save_result = device->Save_Surface_To_TGA(filename.Peek_Buffer(), back_buffer);
 	back_buffer->Release();
 	return SUCCEEDED(save_result) ? screenshot_number : 0;
 #else
@@ -1494,12 +1493,12 @@ bool WW3D::Try_Start_Movie_Capture_From_Back_Buffer( const char * filename_base,
 		return false;
 	}
 
-	IDirect3DDevice9 *device = DX8Wrapper::_Get_D3D_Device8();
+	W3DRenderDevice *device = DX8Wrapper::_Get_D3D_Device8();
 	if (device == nullptr) {
 		return false;
 	}
 
-	IDirect3DSurface9 *back_buffer = nullptr;
+	W3DSurface *back_buffer = nullptr;
 	HRESULT result = device->GetBackBuffer(
 		0, 0, D3DBACKBUFFER_TYPE_MONO, &back_buffer);
 	if (FAILED(result) || back_buffer == nullptr) {
@@ -1735,7 +1734,7 @@ void WW3D::Update_Movie_Capture( void )
 
 	// Lock the front buffer and convert its top-down BGRA rows into the
 	// bottom-up, padded BGR24 layout required by the AVI stream.
-	IDirect3DSurface9 *fb = DX8Wrapper::_Get_DX8_Front_Buffer();
+	W3DSurface *fb = DX8Wrapper::_Get_DX8_Front_Buffer();
 	if (fb == nullptr) {
 		Stop_Movie_Capture();
 		return;
@@ -1797,13 +1796,13 @@ bool WW3D::Try_Update_Movie_Capture_From_Back_Buffer( void )
 
 	WWPROFILE("WW3D::Try_Update_Movie_Capture_From_Back_Buffer");
 
-	IDirect3DDevice9 *device = DX8Wrapper::_Get_D3D_Device8();
+	W3DRenderDevice *device = DX8Wrapper::_Get_D3D_Device8();
 	if (device == nullptr) {
 		Stop_Movie_Capture();
 		return false;
 	}
 
-	IDirect3DSurface9 *back_buffer = nullptr;
+	W3DSurface *back_buffer = nullptr;
 	HRESULT result = device->GetBackBuffer(
 		0, 0, D3DBACKBUFFER_TYPE_MONO, &back_buffer);
 	if (FAILED(result) || back_buffer == nullptr) {
@@ -1823,7 +1822,7 @@ bool WW3D::Try_Update_Movie_Capture_From_Back_Buffer( void )
 		return false;
 	}
 
-	IDirect3DSurface9 *staging_buffer = nullptr;
+	W3DSurface *staging_buffer = nullptr;
 	result = device->CreateOffscreenPlainSurface(
 		desc.Width,
 		desc.Height,

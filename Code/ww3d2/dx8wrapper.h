@@ -45,7 +45,7 @@
 
 #include "always.h"
 #include "dllist.h"
-#include <d3d9.h>
+#include "w3drender.h"
 #include "matrix4.h"
 #include "statistics.h"
 #include "wwstring.h"
@@ -201,6 +201,10 @@ class DX8Wrapper
 
 public:
 
+	// Select the renderer backend. Must be called before Init().
+	static void Set_Renderer(W3DRendererType type) { WWASSERT(!IsInitted); RendererType = type; }
+	static W3DRendererType Get_Renderer() { return RendererType; }
+
 	static bool Init(void * hwnd, bool lite = false);
 	static void Shutdown(void);
 
@@ -266,7 +270,7 @@ public:
 	static void Set_DX8_Texture_Stage_State(unsigned stage, D3DTEXTURESTAGESTATETYPE state, unsigned value);
 	static void Set_DX8_N_Patch_Mode(float segments);
 	static void Set_DX8_Texture_Sampler_State(unsigned sampler, D3DSAMPLERSTATETYPE state, unsigned value);
-	static void Set_DX8_Texture(unsigned int stage, IDirect3DBaseTexture9* texture);
+	static void Set_DX8_Texture(unsigned int stage, W3DBaseTexture* texture);
 	static void Set_Light_Environment(LightEnvironmentClass* light_env);
 	static void Set_Fog(bool enable, const Vector3 &color, float start, float end);
 
@@ -304,31 +308,30 @@ public:
 	/*
 	** Resources
 	*/
-	static IDirect3DTexture9 * _Create_DX8_Texture(
+	static W3DTexture * _Create_DX8_Texture(
 		unsigned int width,
 		unsigned int height,
 		WW3DFormat format,
 		TextureClass::MipCountType mip_level_count,
 		D3DPOOL pool=D3DPOOL_MANAGED,
 		bool rendertarget=false);
-	static IDirect3DTexture9 * _Create_DX8_Texture(const char *filename, TextureClass::MipCountType mip_level_count);
-	static IDirect3DTexture9 * _Create_DX8_Texture(IDirect3DSurface9 *surface, TextureClass::MipCountType mip_level_count);
+	static W3DTexture * _Create_DX8_Texture(W3DSurface *surface, TextureClass::MipCountType mip_level_count);
 
-	static IDirect3DSurface9 * _Create_DX8_Surface(unsigned int width, unsigned int height, D3DPOOL pool, WW3DFormat format);
-	static IDirect3DSurface9 * _Create_DX8_Surface(const char *filename);
-	static IDirect3DSurface9 * _Get_DX8_Front_Buffer();
+	static W3DSurface * _Create_DX8_Surface(unsigned int width, unsigned int height, D3DPOOL pool, WW3DFormat format);
+	static W3DSurface * _Create_DX8_Surface(const char *filename);
+	static W3DSurface * _Get_DX8_Front_Buffer();
 	static SurfaceClass * _Get_DX8_Back_Buffer(unsigned int num=0);
 
 	static void _Copy_DX8_Rects(
-			IDirect3DSurface9* pSourceSurface,
+			W3DSurface* pSourceSurface,
 			CONST RECT* pSourceRectsArray,
 			UINT cRects,
-			IDirect3DSurface9* pDestinationSurface,
+			W3DSurface* pDestinationSurface,
 			CONST POINT* pDestPointsArray
 	);
 	static void _Read_Texture(
-			IDirect3DSurface9* pSourceSurface,
-			IDirect3DSurface9* pDestinationSurface
+			W3DSurface* pSourceSurface,
+			W3DSurface* pDestinationSurface
 	);
 
 	static void _Update_Texture(TextureClass *system, TextureClass *video);
@@ -386,10 +389,10 @@ public:
 	**
 	**	swap_chain_ptr->Present (nullptr, nullptr, nullptr, nullptr);
 	**
-	**	DX8Wrapper::Set_Render_Target ((IDirect3DSurface9 *)nullptr);
+	**	DX8Wrapper::Set_Render_Target ((W3DSurface *)nullptr);
 	**
 	*/
-	static IDirect3DSwapChain9 *	Create_Additional_Swap_Chain (HWND render_window);
+	static W3DSwapChain *	Create_Additional_Swap_Chain (HWND render_window);
 
 	/*
 	** Render target interface. If render target format is WW3D_FORMAT_UNKNOWN, current display format is used.
@@ -397,12 +400,12 @@ public:
 	static TextureClass *	Create_Render_Target (int width, int height, WW3DFormat format);
 
 	static void					Set_Render_Target (TextureClass * texture);
-	static void					Set_Render_Target (IDirect3DSurface9 *render_target, bool use_default_depth_buffer = false);
-	static void					Set_Render_Target (IDirect3DSwapChain9 *swap_chain);
+	static void					Set_Render_Target (W3DSurface *render_target, bool use_default_depth_buffer = false);
+	static void					Set_Render_Target (W3DSwapChain *swap_chain);
 	static bool					Is_Render_To_Texture(void) { return IsRenderToTexture; }
 
-	static IDirect3DDevice9* _Get_D3D_Device8() { return D3DDevice; }
-	static IDirect3D9* _Get_D3D8() { return D3DInterface; }
+	static W3DRenderDevice* _Get_D3D_Device8() { return D3DDevice; }
+	static W3DRenderSystem* _Get_D3D8() { return D3DInterface; }
 
 	static const DX8Caps*	Get_Current_Caps() { WWASSERT(CurrentCaps); return CurrentCaps; }
 
@@ -497,6 +500,8 @@ protected:
 	static RenderStateStruct			render_state;
 	static unsigned						render_state_changed;
 
+	static W3DRendererType				RendererType;
+
 	static bool								IsInitted;
 	static bool								IsDeviceLost;
 	static void *							Hwnd;
@@ -519,7 +524,7 @@ protected:
 	static unsigned						RenderStates[256];
 	static unsigned						TextureStageStates[MAX_TEXTURE_STAGES][32];
 	static unsigned						TextureSamplerStates[MAX_TEXTURE_STAGES][14];
-	static IDirect3DBaseTexture9 *	Textures[MAX_TEXTURE_STAGES];
+	static W3DBaseTexture *	Textures[MAX_TEXTURE_STAGES];
 
 	// These fog settings are constant for all objects in a given scene,
 	// unlike the matching renderstates which vary based on shader settings.
@@ -543,12 +548,12 @@ protected:
 
 	static D3DADAPTER_IDENTIFIER9		CurrentAdapterIdentifier;
 
-	static IDirect3D9 *					D3DInterface;			//d3d8;
-	static IDirect3DDevice9 *			D3DDevice;				//d3ddevice8;
+	static W3DRenderSystem *					D3DInterface;			//d3d8;
+	static W3DRenderDevice *			D3DDevice;				//d3ddevice8;
 
-	static IDirect3DSurface9 *			CurrentRenderTarget;
-	static IDirect3DSurface9 *			DefaultRenderTarget;
-	static IDirect3DSurface9 *			DefaultDepthBuffer;
+	static W3DSurface *			CurrentRenderTarget;
+	static W3DSurface *			DefaultRenderTarget;
+	static W3DSurface *			DefaultDepthBuffer;
 
 	static bool								IsRenderToTexture;
 
@@ -700,7 +705,7 @@ inline void DX8Wrapper::Set_DX8_Texture_Sampler_State(unsigned sampler, D3DSAMPL
     DX8_RECORD_SAMPLER_STATE_CHANGE();
 }
 
-inline void DX8Wrapper::Set_DX8_Texture(unsigned int stage, IDirect3DBaseTexture9* texture)
+inline void DX8Wrapper::Set_DX8_Texture(unsigned int stage, W3DBaseTexture* texture)
 {
 	if (Textures[stage]==texture) return;
 
@@ -714,10 +719,10 @@ inline void DX8Wrapper::Set_DX8_Texture(unsigned int stage, IDirect3DBaseTexture
 }
 
 inline void DX8Wrapper::_Copy_DX8_Rects(
-  IDirect3DSurface9* pSourceSurface,
+  W3DSurface* pSourceSurface,
   CONST RECT* pSourceRectsArray,
   UINT cRects,
-  IDirect3DSurface9* pDestinationSurface,
+  W3DSurface* pDestinationSurface,
   CONST POINT* pDestPointsArray
 )
 {
@@ -731,8 +736,8 @@ inline void DX8Wrapper::_Copy_DX8_Rects(
 }
 
 inline void DX8Wrapper::_Read_Texture(
-  IDirect3DSurface9* pSourceSurface,
-  IDirect3DSurface9* pDestinationSurface)
+  W3DSurface* pSourceSurface,
+  W3DSurface* pDestinationSurface)
 {
 	DX8CALL(GetRenderTargetData(pSourceSurface, pDestinationSurface));
 }
