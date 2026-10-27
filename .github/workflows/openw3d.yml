@@ -22,20 +22,20 @@ jobs:
       matrix:
         include:
           - name: MSVC x86
-            os: windows-latest
+            os: windows-2025
             cmake-args: -GNinja -DCMAKE_BUILD_TYPE=Release
             shell: pwsh
             arch: x86
             options: "/W4;/WX"
           - name: MSVC x64
-            os: windows-latest
+            os: windows-2025
             cmake-args: -GNinja -DCMAKE_BUILD_TYPE=Release
             shell: pwsh
             arch: x64
             options: "/W4;/WX"
             vcpkg: true
           - name: MinGW x64
-            os: windows-latest
+            os: windows-2025
             cmake-args: -DW3D_BUILD_OPTION_FFMPEG=ON -GNinja -DCMAKE_BUILD_TYPE=Release
             build-args: --target combat combate renegade renegadeserver ww3d2e wwaudioe wwphyse
             msys2: true
@@ -43,7 +43,7 @@ jobs:
             msys2-env: mingw-w64-x86_64
             shell: msys2 {0}
           - name: MinGW clang x64
-            os: windows-latest
+            os: windows-2025
             cmake-args: -DW3D_BUILD_OPTION_FFMPEG=ON -GNinja -DCMAKE_BUILD_TYPE=Release
             build-args: --target combat combate renegade renegadeserver ww3d2e wwaudioe wwphyse
             msys2: true
@@ -51,7 +51,7 @@ jobs:
             msys2-env: mingw-w64-clang-x86_64
             shell: msys2 {0}
           - name: MinGW x64 SDL3
-            os: windows-latest
+            os: windows-2025
             cmake-args: -DW3D_BUILD_OPTION_SDL3=ON -DW3D_BUILD_OPTION_FFMPEG=ON -GNinja -DCMAKE_BUILD_TYPE=Release
             build-args: --target combat combate renegade renegadeserver ww3d2e wwaudioe wwphyse
             sdl3: true
