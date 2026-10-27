@@ -42,6 +42,24 @@
             }
         },
         {
+            "name": "win-media",
+            "inherits": "win",
+            "displayName": "Windows + OpenAL/FFmpeg (x64)",
+            "description": "Real audio and movie playback through OpenAL and FFmpeg, installed with vcpkg from dev/vcpkg-media.",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            },
+            "cacheVariables": {
+                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+                "VCPKG_TARGET_TRIPLET": "x64-windows",
+                "VCPKG_MANIFEST_DIR": "${sourceDir}/dev/vcpkg-media",
+                "W3D_BUILD_OPTION_FFMPEG": "ON",
+                "W3D_BUILD_OPTION_OPENAL": "ON"
+            }
+        },
+        {
             "name": "windows-qt",
             "inherits": "win",
             "displayName": "Windows + Qt (x64)",

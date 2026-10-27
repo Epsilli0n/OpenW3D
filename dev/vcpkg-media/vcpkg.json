@@ -1,0 +1,10 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "openw3d-media",
+  "description": "Audio and video dependencies only (OpenAL for sound, FFmpeg for audio decoding and movies), without the Qt tools.",
+  "builtin-baseline": "b02e341c927f16d991edbd915d8ea43eac52096c",
+  "dependencies": [
+    "ffmpeg",
+    "openal-soft"
+  ]
+}
