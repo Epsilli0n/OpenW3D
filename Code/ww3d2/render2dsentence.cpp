@@ -94,6 +94,7 @@ Render2DSentenceClass::Render2DSentenceClass (void) :
 	TextureSizeHint (0),
 	WrapWidth (0),
 	TabStop (5.0),
+	CoordinateScale (1.0F),
 	DrawExtents (0, 0, 0, 0),
 	Renderers(sizeof(PreAllocatedRenderers)/sizeof(RendererDataStruct),PreAllocatedRenderers)
 {
@@ -256,8 +257,9 @@ Render2DSentenceClass::Render (void)
 void
 Render2DSentenceClass::Set_Base_Location (const Vector2 &loc)
 {
-	Vector2 dif		= loc - BaseLocation;
-	BaseLocation	= loc;
+	const Vector2 scaled_loc = loc * CoordinateScale;
+	Vector2 dif		= scaled_loc - BaseLocation;
+	BaseLocation	= scaled_loc;
 	for (int i = 0; i < Renderers.Count (); i ++) {
 		Renderers[i].Renderer->Move (dif);
 	}
@@ -274,7 +276,7 @@ Render2DSentenceClass::Set_Base_Location (const Vector2 &loc)
 void
 Render2DSentenceClass::Set_Location (const Vector2 &loc)
 {
-	Location	= loc;
+	Location	= loc * CoordinateScale;
 	return ;
 }
 
@@ -312,7 +314,7 @@ Render2DSentenceClass::Get_Text_Extents (const unichar_t *text)
 		}
 	}
 
-	return extent;
+	return extent / CoordinateScale;
 }
 
 
@@ -475,7 +477,7 @@ Render2DSentenceClass::Get_Formatted_Text_Extents (const unichar_t *text, int *r
 		(*row_count) = row_counter + 1;
 	}
 
-	return extent;
+	return extent / CoordinateScale;
 }
 
 

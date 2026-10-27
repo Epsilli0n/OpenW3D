@@ -158,16 +158,30 @@ public:
 	FontCharsClass *	Peek_Font( void )						{ return Font; }
 	void	Set_Font( FontCharsClass *font );
 
+	//
+	//	Coordinate scale: callers work in units of 'scale' screen pixels (the HUD uses this
+	//	to lay out in 800x600-era units on large screens). Locations, wrap widths and clip
+	//	rects are multiplied by it and text extents divided by it. Glyph sizes are not
+	//	affected; the font is already sized for the screen. Defaults to 1.
+	//
+	void	Set_Coordinate_Scale( float scale )				{ CoordinateScale = (scale > 0.0F) ? scale : 1.0F; }
+	float	Get_Coordinate_Scale( void ) const				{ return CoordinateScale; }
+
 	void	Set_Location( const Vector2 & loc );
 	void	Set_Base_Location( const Vector2 & loc );
-	void	Set_Wrapping_Width (float width)					{ WrapWidth = width; }
+	void	Set_Wrapping_Width (float width)					{ WrapWidth = width * CoordinateScale; }
 
 	void	Set_Tabstop(float stop);
 
 	//
 	// Clipping support
 	//
-	void	Set_Clipping_Rect( const RectClass &rect )	{ ClipRect = rect; IsClippedEnabled = true; }
+	void	Set_Clipping_Rect( const RectClass &rect )
+	{
+		ClipRect = rect;
+		ClipRect.Scale( Vector2( CoordinateScale, CoordinateScale ) );
+		IsClippedEnabled = true;
+	}
 	bool	Is_Clipping_Enabled( void ) const				{ return IsClippedEnabled; }
 	void	Enable_Clipping( bool onoff )						{ IsClippedEnabled = onoff; }
 
@@ -180,7 +194,12 @@ public:
 
 //	void	Draw_Block( const RectClass & screen, unsigned int color = 0xFFFFFFFF );
 
-	const RectClass & Get_Draw_Extents( void )			{ return DrawExtents; }
+	RectClass			Get_Draw_Extents( void ) const
+	{
+		RectClass extents = DrawExtents;
+		extents.Scale( Vector2( 1.0F / CoordinateScale, 1.0F / CoordinateScale ) );
+		return extents;
+	}
 //	const RectClass & Get_Total_Extents( void )			{ return TotalExtents; }
 //	const Vector2 & Get_Cursor( void )						{ return Cursor; }
 
@@ -266,6 +285,7 @@ private:
 	bool												MonoSpaced;
 	float												WrapWidth;
 	float												TabStop;
+	float												CoordinateScale;
 	RectClass										ClipRect;
 	RectClass										DrawExtents;
 	bool												IsClippedEnabled;
