@@ -219,6 +219,14 @@ set(WW3D2_SRC
     ww3dtrig.h
 )
 
+# Native Direct3D 12 renderer.
+if(W3D_RENDERER_D3D12)
+    list(APPEND WW3D2_SRC
+        d3d12/d3d12device.cpp
+        d3d12/d3d12device.h
+    )
+endif()
+
 # Targets to build.
 add_library(ww3d2 STATIC)
 
@@ -228,6 +236,10 @@ target_link_libraries(ww3d2 PRIVATE
     vfw32
     winmm
 )
+
+if(W3D_RENDERER_D3D12)
+    target_include_directories(ww3d2 PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/d3d12")
+endif()
 
 if(TARGET Freetype::Freetype)
     target_link_libraries(ww3d2 PUBLIC Freetype::Freetype)
@@ -252,6 +264,10 @@ if (W3D_TOOLS)
     endif()
 
     target_compile_definitions(ww3d2e PRIVATE PARAM_EDITING_ON)
+
+    if(W3D_RENDERER_D3D12)
+        target_include_directories(ww3d2e PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/d3d12")
+    endif()
 
     target_sources(ww3d2e PRIVATE ${WW3D2_SRC})
 endif()
@@ -300,4 +316,20 @@ if(BUILD_TESTING AND WIN32)
         winmm
     )
     add_test(NAME ww3d2_framegrab_tests COMMAND ww3d2_framegrab_tests)
+
+    if(W3D_RENDERER_D3D12)
+        add_executable(ww3d2_d3d12_device_tests
+            tests/D3D12DeviceTests.cpp
+        )
+        w3d_compile_hlsl(ww3d2_d3d12_device_tests
+            SOURCE tests/d3d12_smoke.hlsl ENTRY VSMain PROFILE vs_6_0 VARIABLE g_d3d12_smoke_vs)
+        w3d_compile_hlsl(ww3d2_d3d12_device_tests
+            SOURCE tests/d3d12_smoke.hlsl ENTRY PSMain PROFILE ps_6_0 VARIABLE g_d3d12_smoke_ps)
+        target_link_libraries(ww3d2_d3d12_device_tests PRIVATE
+            wwcommon
+            wwdebug
+            ww3d2
+        )
+        add_test(NAME ww3d2_d3d12_device_tests COMMAND ww3d2_d3d12_device_tests)
+    endif()
 endif()
