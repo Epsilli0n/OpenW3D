@@ -21,6 +21,7 @@
 #include "wwdebug.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cstring>
 
 namespace
@@ -380,6 +381,23 @@ bool D3D12DeviceClass::Create_Device(const D3D12DeviceInitParams &params)
 	CommandList->Close();
 
 	D3D12_CHECK(DeviceObject->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&Fence)), "CreateFence");
+
+	// GPU frame timing: a begin and end timestamp per frame slot.
+	{
+		D3D12_QUERY_HEAP_DESC query_desc = {};
+		query_desc.Type = D3D12_QUERY_HEAP_TYPE_TIMESTAMP;
+		query_desc.Count = FRAMES_IN_FLIGHT * 2;
+		D3D12_HEAP_PROPERTIES readback_heap = Heap_Properties(D3D12_HEAP_TYPE_READBACK);
+		const D3D12_RESOURCE_DESC readback_desc = Buffer_Desc(sizeof(uint64_t) * FRAMES_IN_FLIGHT * 2);
+		if (FAILED(DeviceObject->CreateQueryHeap(&query_desc, IID_PPV_ARGS(&TimestampHeap))) ||
+			FAILED(DeviceObject->CreateCommittedResource(&readback_heap, D3D12_HEAP_FLAG_NONE, &readback_desc,
+				D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&TimestampReadback))) ||
+			FAILED(QueueObject->GetTimestampFrequency(&TimestampFrequency))) {
+			TimestampHeap.Reset();
+			TimestampReadback.Reset();
+			TimestampFrequency = 0;
+		}
+	}
 	FenceEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
 	if (FenceEvent == nullptr) {
 		return false;
@@ -579,6 +597,9 @@ void D3D12DeviceClass::Begin_Frame()
 	ID3D12Resource *back_buffer = BackBuffers[SwapChain ? SwapChain->GetCurrentBackBufferIndex() : 0].Get();
 	Transition(back_buffer, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 	Bind_Back_Buffer();
+	if (TimestampHeap) {
+		CommandList->EndQuery(TimestampHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, FrameSlot * 2);
+	}
 }
 
 void D3D12DeviceClass::Clear(bool clear_color, bool clear_depth_stencil, const float rgba[4], float depth, uint8_t stencil)
@@ -598,11 +619,18 @@ bool D3D12DeviceClass::End_Frame(bool present, unsigned sync_interval)
 
 	ID3D12Resource *back_buffer = BackBuffers[SwapChain ? SwapChain->GetCurrentBackBufferIndex() : 0].Get();
 	Transition(back_buffer, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+	if (TimestampHeap) {
+		CommandList->EndQuery(TimestampHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, FrameSlot * 2 + 1);
+		CommandList->ResolveQueryData(TimestampHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, FrameSlot * 2, 2,
+			TimestampReadback.Get(), sizeof(uint64_t) * FrameSlot * 2);
+		TimestampPending[FrameSlot] = true;
+	}
 
 	if (!Submit()) {
 		return false;
 	}
 
+	const auto wait_start = std::chrono::steady_clock::now();
 	if (present && SwapChain) {
 		const UINT flags = (sync_interval == 0 && AllowTearing) ? DXGI_PRESENT_ALLOW_TEARING : 0;
 		const HRESULT hr = SwapChain->Present(sync_interval, flags);
@@ -619,8 +647,23 @@ bool D3D12DeviceClass::End_Frame(bool present, unsigned sync_interval)
 	FrameSlot = (FrameSlot + 1) % FRAMES_IN_FLIGHT;
 	++FrameNumber;
 	Wait_For_Fence(SlotFenceValues[FrameSlot]);
+	if (TimestampPending[FrameSlot]) {
+		TimestampPending[FrameSlot] = false;
+		const D3D12_RANGE range = { sizeof(uint64_t) * FrameSlot * 2, sizeof(uint64_t) * (FrameSlot * 2 + 2) };
+		void *mapped = nullptr;
+		if (SUCCEEDED(TimestampReadback->Map(0, &range, &mapped))) {
+			const uint64_t *ticks = static_cast<const uint64_t *>(mapped) + FrameSlot * 2;
+			if (ticks[1] > ticks[0] && TimestampFrequency != 0) {
+				LastGPUFrameMs = 1000.0 * double(ticks[1] - ticks[0]) / double(TimestampFrequency);
+			}
+			const D3D12_RANGE none = { 0, 0 };
+			TimestampReadback->Unmap(0, &none);
+		}
+	}
+	WaitSeconds += std::chrono::duration<double>(std::chrono::steady_clock::now() - wait_start).count();
 
 	Allocators[FrameSlot]->Reset();
+	LastFrameUploadBytes = UploadRing.Bytes_Used_This_Frame();
 	UploadRing.Begin_Frame(FrameSlot);
 	Release_Deferred(false);
 	Reopen_Command_List();

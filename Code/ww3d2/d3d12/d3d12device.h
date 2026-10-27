@@ -200,6 +200,13 @@ public:
 	// True after a device removal; the device cannot be used any more.
 	bool									Is_Lost() const { return DeviceLost; }
 
+	// Time spent in Present and waiting for the GPU since the last call, in seconds.
+	double									Take_Wait_Seconds() { const double s = WaitSeconds; WaitSeconds = 0.0; return s; }
+	// GPU time of the most recent frame whose results are available, in milliseconds.
+	double									Last_GPU_Frame_Ms() const { return LastGPUFrameMs; }
+	// Upload ring bytes used by the last completed frame.
+	uint64_t								Last_Frame_Upload_Bytes() const { return LastFrameUploadBytes; }
+
 	// Changes every time the command list is reset; all bindings must be set again.
 	uint64_t								List_Epoch() const { return ListEpoch; }
 
@@ -253,6 +260,13 @@ private:
 	unsigned										FrameSlot = 0;
 	uint64_t										FrameNumber = 0;
 	uint64_t										ListEpoch = 0;
+	double											WaitSeconds = 0.0;
+	ComPtr<ID3D12QueryHeap>					TimestampHeap;
+	ComPtr<ID3D12Resource>					TimestampReadback;
+	uint64_t										TimestampFrequency = 0;
+	bool											TimestampPending[FRAMES_IN_FLIGHT] = {};
+	double											LastGPUFrameMs = 0.0;
+	uint64_t										LastFrameUploadBytes = 0;
 	bool											AllowTearing = false;
 	bool											InFrame = false;
 	bool											DeviceLost = false;

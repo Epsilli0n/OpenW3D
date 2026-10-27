@@ -434,6 +434,8 @@ bool D3D12RenderDevice::Init(IDXGIAdapter1 *adapter, HWND window, const D3DPRESE
 	case D3DPRESENT_INTERVAL_THREE:		SyncInterval = 3; break;
 	default:										SyncInterval = 1; break;
 	}
+	const char *stats = std::getenv("W3D_RENDER_STATS");
+	StatsEnabled = stats != nullptr && stats[0] == '1';
 
 	BackBufferSurface = new D3D12Surface(this, D3D12Surface::KIND_BACK_BUFFER);
 	DepthSurface = new D3D12Surface(this, D3D12Surface::KIND_DEPTH);
@@ -838,6 +840,19 @@ bool D3D12RenderDevice::Bind_Geometry(INT &base_vertex, UINT min_index, UINT ver
 
 HRESULT D3D12RenderDevice::DrawIndexedPrimitive(D3DPRIMITIVETYPE type, INT base_vertex, UINT min_index, UINT vertex_count, UINT start_index, UINT primitive_count)
 {
+	if (!StatsEnabled) {
+		return Draw_Indexed(type, base_vertex, min_index, vertex_count, start_index, primitive_count);
+	}
+	LARGE_INTEGER begin, end;
+	QueryPerformanceCounter(&begin);
+	const HRESULT hr = Draw_Indexed(type, base_vertex, min_index, vertex_count, start_index, primitive_count);
+	QueryPerformanceCounter(&end);
+	Stats.DrawTicks += end.QuadPart - begin.QuadPart;
+	return hr;
+}
+
+HRESULT D3D12RenderDevice::Draw_Indexed(D3DPRIMITIVETYPE type, INT base_vertex, UINT min_index, UINT vertex_count, UINT start_index, UINT primitive_count)
+{
 	if (Stream == nullptr || Indices == nullptr || primitive_count == 0 || StreamStride == 0 || Native_Device.Is_Lost()) {
 		return D3D_OK;
 	}
@@ -929,6 +944,9 @@ HRESULT D3D12RenderDevice::DrawIndexedPrimitive(D3DPRIMITIVETYPE type, INT base_
 	list->RSSetScissorRects(1, &scissor);
 
 	list->DrawIndexedInstanced(index_count, 1, start_index, base_vertex, 0);
+	++Stats.Draws;
+	++Stats.PipelineBinds;
+	++Stats.ConstantUploads;
 	return D3D_OK;
 }
 
@@ -984,7 +1002,38 @@ HRESULT D3D12RenderDevice::Present(const RECT *, const RECT *, HWND, const RGNDA
 	Ensure_Frame();
 	const bool ok = Native_Device.End_Frame(true, SyncInterval);
 	TargetsDirty = true;
+	if (StatsEnabled) {
+		Record_Frame_Stats();
+	}
 	return ok ? D3D_OK : D3DERR_DEVICELOST;
+}
+
+void D3D12RenderDevice::Record_Frame_Stats()
+{
+	LARGE_INTEGER now, frequency;
+	QueryPerformanceCounter(&now);
+	QueryPerformanceFrequency(&frequency);
+	if (LastPresentTicks != 0) {
+		Stats.FrameSeconds += double(now.QuadPart - LastPresentTicks) / double(frequency.QuadPart);
+		Stats.WaitSeconds += Native_Device.Take_Wait_Seconds();
+		Stats.UploadBytes += Native_Device.Last_Frame_Upload_Bytes();
+		Stats.GPUMs += Native_Device.Last_GPU_Frame_Ms();
+		++Stats.Frames;
+	} else {
+		Native_Device.Take_Wait_Seconds();
+	}
+	LastPresentTicks = now.QuadPart;
+
+	if (Stats.FrameSeconds >= 2.0 && Stats.Frames > 0) {
+		const double frames = double(Stats.Frames);
+		WWRELEASE_SAY(("D3D12 stats: %.1f fps, frame %.2f ms (cpu %.2f ms, waiting %.2f ms), %.0f draws, %.0f pipeline binds, %.0f constant uploads, %.2f MB uploaded per frame, %u pipelines\n",
+			frames / Stats.FrameSeconds, 1000.0 * Stats.FrameSeconds / frames,
+			1000.0 * (Stats.FrameSeconds - Stats.WaitSeconds) / frames, 1000.0 * Stats.WaitSeconds / frames,
+			double(Stats.Draws) / frames, double(Stats.PipelineBinds) / frames, double(Stats.ConstantUploads) / frames,
+			double(Stats.UploadBytes) / frames / (1024.0 * 1024.0), unsigned(Pipelines.size())));
+		WWRELEASE_SAY(("D3D12 stats: backend draw path %.3f ms per frame, gpu %.3f ms per frame\n", 1000.0 * double(Stats.DrawTicks) / double(frequency.QuadPart) / frames, Stats.GPUMs / frames));
+		Stats = FrameStats();
+	}
 }
 
 HRESULT D3D12RenderDevice::TestCooperativeLevel()

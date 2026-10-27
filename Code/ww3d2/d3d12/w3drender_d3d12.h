@@ -354,6 +354,25 @@ private:
 	uint64_t								BoundEpoch = UINT64_MAX;
 	bool									TargetsDirty = true;
 
+	// Optional statistics (W3D_RENDER_STATS=1), logged every two seconds.
+	struct FrameStats
+	{
+		unsigned		Frames = 0;
+		uint64_t		Draws = 0;
+		uint64_t		PipelineBinds = 0;
+		uint64_t		ConstantUploads = 0;
+		uint64_t		UploadBytes = 0;
+		double		FrameSeconds = 0.0;
+		double		WaitSeconds = 0.0;
+		int64_t		DrawTicks = 0;
+		double		GPUMs = 0.0;
+	};
+	void		Record_Frame_Stats();
+	HRESULT	Draw_Indexed(D3DPRIMITIVETYPE type, INT base_vertex, UINT min_index, UINT vertex_count, UINT start_index, UINT primitive_count);
+	bool									StatsEnabled = false;
+	FrameStats							Stats;
+	int64_t								LastPresentTicks = 0;
+
 	// D3D9 state
 	DWORD									RenderStates[256];
 	DWORD									StageStates[8][33];
