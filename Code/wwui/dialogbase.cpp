@@ -141,7 +141,19 @@ DialogBaseClass::Start_Dialog (void)
 	//
 	//	Convert the dialog's width and height from dialog units to screen units
 	//
-	const RectClass &screen_rect	= Render2DClass::Get_Screen_Resolution ();
+	//
+	//	Dialogs are authored for a 4:3 screen. On wider screens lay them out in a centred
+	//	4:3 area so they keep their proportions instead of stretching horizontally.
+	//
+	const RectClass &real_screen_rect	= Render2DClass::Get_Screen_Resolution ();
+	RectClass screen_rect					= real_screen_rect;
+	const float layout_width				= real_screen_rect.Height () * (RES_SCREEN_WIDTH / RES_SCREEN_HEIGHT);
+	if (layout_width < real_screen_rect.Width ()) {
+		const float inset = WWMath::Trunc((real_screen_rect.Width () - layout_width) * 0.5F);
+		screen_rect.Left	= real_screen_rect.Left + inset;
+		screen_rect.Right	= screen_rect.Left + layout_width;
+	}
+
 	float dlg_screen_width				= WWMath::Trunc(((float)DialogResource_->cx / RES_SCREEN_WIDTH) * screen_rect.Width ());
 	float dlg_screen_height			= WWMath::Trunc(((float)DialogResource_->cy / RES_SCREEN_HEIGHT) * screen_rect.Height ());
 
