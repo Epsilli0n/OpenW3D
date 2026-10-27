@@ -721,6 +721,11 @@ bool DX8Wrapper::Set_Render_Device(int dev, int width, int height, int bits, int
 	_PresentParameters.FullScreen_RefreshRateInHz = D3DPRESENT_RATE_DEFAULT;
 	_PresentParameters.PresentationInterval = D3DPRESENT_INTERVAL_DEFAULT;
 
+	// Benchmarking: W3D_VSYNC=0 presents without waiting for vertical sync.
+	if (const char *vsync = getenv("W3D_VSYNC"); vsync != nullptr && vsync[0] == '0') {
+		_PresentParameters.PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;
+	}
+
 	/*
 	** Set up the buffer formats.  Several issues here:
 	** - if in windowed mode, the backbuffer must use the current display format.
@@ -1500,6 +1505,29 @@ void DX8Wrapper::End_Scene(bool flip_frames)
 		}
 		else {
 			DX8_ErrorCode(hr);
+		}
+	}
+
+	// W3D_RENDER_STATS=1 logs the frame rate every two seconds, for any backend.
+	if (flip_frames) {
+		static const bool stats = [] { const char *v = getenv("W3D_RENDER_STATS"); return v != nullptr && v[0] == '1'; }();
+		if (stats) {
+			static LARGE_INTEGER start = {};
+			static unsigned frames = 0;
+			LARGE_INTEGER now, frequency;
+			QueryPerformanceCounter(&now);
+			QueryPerformanceFrequency(&frequency);
+			if (start.QuadPart == 0) {
+				start = now;
+			} else {
+				++frames;
+			}
+			const double seconds = double(now.QuadPart - start.QuadPart) / double(frequency.QuadPart);
+			if (seconds >= 2.0 && frames > 0) {
+				WWRELEASE_SAY(("Frame stats (%s): %.1f fps, frame %.3f ms\n", D3DInterface->Get_Backend_Name(), frames / seconds, 1000.0 * seconds / frames));
+				start = now;
+				frames = 0;
+			}
 		}
 	}
 
