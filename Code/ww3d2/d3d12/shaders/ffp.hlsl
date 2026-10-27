@@ -130,8 +130,11 @@ cbuffer FFPConstants : register(b0)
 	FFPLight Lights[MAX_LIGHTS];
 };
 
-Texture2D    Textures[MAX_STAGES] : register(t0);
-SamplerState Samplers[MAX_STAGES] : register(s0);
+// Separate declarations: each stage has its own root descriptor table.
+Texture2D    Texture0 : register(t0);
+Texture2D    Texture1 : register(t1);
+SamplerState Sampler0 : register(s0);
+SamplerState Sampler1 : register(s1);
 
 struct VSInput
 {
@@ -372,7 +375,7 @@ float4 Stage_Op(uint op, float4 a0, float4 a1, float4 a2, float4 current, float4
 float4 Sample_Stage(uint stage, float4 tc)
 {
 	const float2 uv = tc.xy / tc.w;
-	return (stage == 0) ? Textures[0].Sample(Samplers[0], uv) : Textures[1].Sample(Samplers[1], uv);
+	return (stage == 0) ? Texture0.Sample(Sampler0, uv) : Texture1.Sample(Sampler1, uv);
 }
 
 bool Alpha_Test(uint func, float alpha, uint reference)

@@ -643,6 +643,7 @@ bool D3D12DeviceClass::Submit()
 void D3D12DeviceClass::Reopen_Command_List()
 {
 	CommandList->Reset(Allocators[FrameSlot].Get(), nullptr);
+	++ListEpoch;
 	ID3D12DescriptorHeap *heaps[] = { SRVHeap.Heap(), SamplerHeap.Heap() };
 	CommandList->SetDescriptorHeaps(2, heaps);
 }

@@ -200,6 +200,9 @@ public:
 	// True after a device removal; the device cannot be used any more.
 	bool									Is_Lost() const { return DeviceLost; }
 
+	// Changes every time the command list is reset; all bindings must be set again.
+	uint64_t								List_Epoch() const { return ListEpoch; }
+
 private:
 	bool			Create_Device(const D3D12DeviceInitParams &params);
 	bool			Create_Swap_Chain(HWND window);
@@ -249,6 +252,7 @@ private:
 	unsigned										BufferHeight = 0;
 	unsigned										FrameSlot = 0;
 	uint64_t										FrameNumber = 0;
+	uint64_t										ListEpoch = 0;
 	bool											AllowTearing = false;
 	bool											InFrame = false;
 	bool											DeviceLost = false;

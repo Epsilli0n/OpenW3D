@@ -230,6 +230,9 @@ if(W3D_RENDERER_D3D12)
         d3d12/d3d12device.h
         d3d12/d3d12formats.cpp
         d3d12/d3d12formats.h
+        d3d12/d3d12resources.cpp
+        d3d12/w3drender_d3d12.cpp
+        d3d12/w3drender_d3d12.h
     )
 endif()
 
