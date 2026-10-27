@@ -143,6 +143,8 @@ jobs:
       run: >- 
         cmake -S . -B build ${{ matrix.cmake-args }}
         -DW3D_BUILD_QT_TOOLS=ON
+        -DW3D_BUILD_OPTION_FFMPEG=ON
+        -DW3D_BUILD_OPTION_OPENAL=ON
         -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/vcpkg-export-${{env.WINDOWS_VCPKG_VERSION}}/scripts/buildsystems/vcpkg.cmake
         -DVCPKG_EXPORT=vcpkg-export-${{env.WINDOWS_VCPKG_VERSION}} -DVCPKG_ROOT=${{github.workspace}}/vcpkg-export-${{env.WINDOWS_VCPKG_VERSION}}
         -DVCPKG_MANIFEST_DIR=""
