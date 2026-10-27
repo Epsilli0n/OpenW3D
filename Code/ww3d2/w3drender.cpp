@@ -21,16 +21,39 @@
 W3DRenderSystem *	W3D_Create_D3D9_Render_System();
 const char *		W3D_D3D9_Error_String(HRESULT result);
 
+#ifdef W3D_RENDERER_D3D12
+W3DRenderSystem *	W3D_Create_D3D12_Render_System();
+#endif
+
 W3DRenderSystem *W3D_Create_Render_System(W3DRendererType type)
 {
 	switch (type) {
 	case W3DRendererType::D3D9:
 		return W3D_Create_D3D9_Render_System();
 	case W3DRendererType::D3D12:
-		// The D3D12 backend is not connected yet.
+#ifdef W3D_RENDERER_D3D12
+		return W3D_Create_D3D12_Render_System();
+#else
 		return nullptr;
+#endif
 	}
 	return nullptr;
+}
+
+bool W3D_Parse_Renderer_Name(const char *name, W3DRendererType &type)
+{
+	if (name == nullptr) {
+		return false;
+	}
+	if (_stricmp(name, "d3d9") == 0) {
+		type = W3DRendererType::D3D9;
+		return true;
+	}
+	if (_stricmp(name, "d3d12") == 0) {
+		type = W3DRendererType::D3D12;
+		return true;
+	}
+	return false;
 }
 
 const char *W3D_Render_Error_String(HRESULT result)

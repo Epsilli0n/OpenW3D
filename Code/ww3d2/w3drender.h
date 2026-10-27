@@ -206,6 +206,9 @@ enum class W3DRendererType
 // Create the render system for a backend. Returns nullptr if it is unavailable.
 W3DRenderSystem *	W3D_Create_Render_System(W3DRendererType type);
 
+// Parse "d3d9" / "d3d12" (case-insensitive). Returns false for unknown names.
+bool					W3D_Parse_Renderer_Name(const char *name, W3DRendererType &type);
+
 // Human-readable name of an HRESULT returned by a backend.
 const char *		W3D_Render_Error_String(HRESULT result);
 

@@ -50,6 +50,7 @@
 #include "openw3d.h"
 #include "useroptions.h"
 #include "pathutil.h"
+#include "dx8wrapper.h"
 
 //
 // Class statics
@@ -95,6 +96,19 @@ cUserOptions::ParseResult cUserOptions::Parse_Command_Line(int argc, char *argv[
 
 	// Resolve the config file path before later arguments can change the working directory.
 	OpenW3D::Get_Config_File_Path();
+
+	// Renderer backend from the config; --renderer below overrides it.
+	{
+		RegistryClass render_registry(APPLICATION_SUB_KEY_NAME_RENDER, false);
+		if (render_registry.Is_Valid()) {
+			char name[32] = {};
+			render_registry.Get_String("Renderer", name, sizeof(name), "");
+			W3DRendererType type;
+			if (W3D_Parse_Renderer_Name(name, type)) {
+				DX8Wrapper::Set_Renderer(type);
+			}
+		}
+	}
 
 	//
 	// Loop through all the command line arguments.
@@ -208,6 +222,17 @@ cUserOptions::ParseResult cUserOptions::Parse_Command_Line(int argc, char *argv[
 			continue;
 		}
 
+		if (strcmp(cmd, "--renderer") == 0) {
+			i++;
+			W3DRendererType type;
+			if (i >= argc || !W3D_Parse_Renderer_Name(argv[i], type)) {
+				retcode = FAILURE;
+				break;
+			}
+			DX8Wrapper::Set_Renderer(type);
+			continue;
+		}
+
 #ifndef BETACLIENT
 		if (strcmp(cmd, "--gamespy-connect") == 0) {
 			const char *argval = argv[i + 1];
@@ -296,6 +321,7 @@ void cUserOptions::Print_Command_Line_Help(bool error)
 	fprintf(file, "    [--gamedir PATH]\n");
 	fprintf(file, "    [--ini PATH]\n");
 	fprintf(file, "    [--gamespyserver ADDRESS] [--nodx]\n");
+	fprintf(file, "    [--renderer d3d9|d3d12]\n");
 #ifndef BETACLIENT
 	fprintf(file, "    [--gamespy-connect IP[:PORT]]\n");
 	fprintf(file, "    [--gamespy-netplayername NAME]\n");
