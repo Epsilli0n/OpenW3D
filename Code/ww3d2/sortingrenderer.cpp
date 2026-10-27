@@ -22,8 +22,7 @@
 #include "dx8wrapper.h"
 #include "vertmaterial.h"
 #include "texture.h"
-#include <d3d9.h>
-#include <d3dx9math.h>
+#include "matrix4.h"
 #include "statistics.h"
 #include <wwprofile.h>
 
@@ -319,14 +318,12 @@ void SortingRendererClass::Insert_Triangles(
 
 	// Transform the center point to view space for sorting
 
-	D3DXMATRIX mtx=(D3DXMATRIX&)state->sorting_state.world*(D3DXMATRIX&)state->sorting_state.view;
-	D3DXVECTOR3 vec=(D3DXVECTOR3&)state->bounding_sphere.Center;
-	D3DXVECTOR4 transformed_vec;
-	D3DXVec3Transform(
-		&transformed_vec,
-		&vec,
-		&mtx);
-	state->transformed_center=Vector3(transformed_vec[0],transformed_vec[1],transformed_vec[2]);
+	// The stored world and view matrices are in D3D (row vector) convention, so the
+	// combined matrix is transposed back to Westwood (column vector) convention to transform.
+	const Matrix4 world_view=(state->sorting_state.world*state->sorting_state.view).Transpose();
+	Vector3 transformed_center;
+	Matrix4::Transform_Vector(world_view,state->bounding_sphere.Center,&transformed_center);
+	state->transformed_center=transformed_center;
 
 	SortingNodeStruct* node=sorted_list.Head();
 	while (node) {
@@ -507,9 +504,7 @@ void SortingRendererClass::Flush_Sorting_Pool()
 			src_verts+=state->sorting_state.index_base_offset;
 			src_verts+=state->min_vertex_index;
 
-			D3DXMATRIX d3d_mtx=(D3DXMATRIX&)state->sorting_state.world*(D3DXMATRIX&)state->sorting_state.view;
-			D3DXMatrixTranspose(&d3d_mtx,&d3d_mtx);
-			const Matrix4& mtx=(const Matrix4&)d3d_mtx;
+			const Matrix4 mtx=(state->sorting_state.world*state->sorting_state.view).Transpose();
 			unsigned i;
 			for (i=0;i<state->vertex_count;++i,++src_verts) {
 				vertex_z_array_ptr[i] = (mtx[2][0] * src_verts->x + mtx[2][1] * src_verts->y + mtx[2][2] * src_verts->z + mtx[2][3]);
