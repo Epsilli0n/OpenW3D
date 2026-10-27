@@ -3,6 +3,7 @@
 #ifdef _MSC_VER
 #include <dxerr.h>
 #else
+#include <stdio.h>
 
 static inline const char*  DXGetErrorStringA(HRESULT hr) {
     static char text[32];
