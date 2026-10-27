@@ -55,6 +55,10 @@ if(TARGET ffmpeg)
     target_link_libraries(wwcommon INTERFACE ffmpeg)
 endif()
 
+if(TARGET d3d12lib)
+    target_link_libraries(wwcommon INTERFACE d3d12lib)
+endif()
+
 if(TARGET icu)
     target_include_directories(wwcommon INTERFACE
         wwlib/icu

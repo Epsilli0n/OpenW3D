@@ -144,6 +144,8 @@ endif()
 
 include(dx9)
 
+include(d3d12)
+
 include(gamespy)
 
 # Add main build targets
