@@ -920,7 +920,10 @@ HRESULT D3D12RenderDevice::DrawIndexedPrimitive(D3DPRIMITIVETYPE type, INT base_
 	list->SetGraphicsRootDescriptorTable(ROOT_SAMPLER1, Get_Sampler(1));
 	list->IASetPrimitiveTopology(topology);
 
-	D3D12_VIEWPORT viewport = { float(Viewport.X), float(Viewport.Y), float(Viewport.Width), float(Viewport.Height), Viewport.MinZ, Viewport.MaxZ };
+	// Direct3D 9 puts pixel centres on integer coordinates; Direct3D 10+ puts them at +0.5.
+	// Shifting the viewport by half a pixel reproduces D3D9 rasterisation exactly, which the
+	// engine's 2D code (Screen UV Bias) and texel-aligned UI rely on.
+	D3D12_VIEWPORT viewport = { float(Viewport.X) + 0.5f, float(Viewport.Y) + 0.5f, float(Viewport.Width), float(Viewport.Height), Viewport.MinZ, Viewport.MaxZ };
 	D3D12_RECT scissor = { LONG(Viewport.X), LONG(Viewport.Y), LONG(Viewport.X + Viewport.Width), LONG(Viewport.Y + Viewport.Height) };
 	list->RSSetViewports(1, &viewport);
 	list->RSSetScissorRects(1, &scissor);
