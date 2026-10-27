@@ -317,6 +317,20 @@ if(BUILD_TESTING AND WIN32)
     )
     add_test(NAME ww3d2_framegrab_tests COMMAND ww3d2_framegrab_tests)
 
+    # Compares replacements for D3DX helpers against D3DX; needs the D3DX library.
+    if(MSVC)
+        add_executable(ww3d2_d3dx_replacement_tests
+            tests/D3DXReplacementTests.cpp
+            dx8fvf.cpp
+        )
+        target_link_libraries(ww3d2_d3dx_replacement_tests PRIVATE
+            wwcommon
+            wwlib
+            wwmath
+        )
+        add_test(NAME ww3d2_d3dx_replacement_tests COMMAND ww3d2_d3dx_replacement_tests)
+    endif()
+
     if(W3D_RENDERER_D3D12)
         add_executable(ww3d2_d3d12_device_tests
             tests/D3D12DeviceTests.cpp
