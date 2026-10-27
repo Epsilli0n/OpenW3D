@@ -245,6 +245,8 @@ target_link_libraries(ww3d2 PRIVATE
 
 if(W3D_RENDERER_D3D12)
     target_include_directories(ww3d2 PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/d3d12")
+    w3d_compile_hlsl(ww3d2 SOURCE d3d12/shaders/ffp.hlsl ENTRY VSMain PROFILE vs_6_0 VARIABLE g_ffp_vs)
+    w3d_compile_hlsl(ww3d2 SOURCE d3d12/shaders/ffp.hlsl ENTRY PSMain PROFILE ps_6_0 VARIABLE g_ffp_ps)
 endif()
 
 if(TARGET Freetype::Freetype)
@@ -273,6 +275,8 @@ if (W3D_TOOLS)
 
     if(W3D_RENDERER_D3D12)
         target_include_directories(ww3d2e PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/d3d12")
+        target_include_directories(ww3d2e PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/shaders")
+        add_dependencies(ww3d2e ww3d2)
     endif()
 
     target_sources(ww3d2e PRIVATE ${WW3D2_SRC})
