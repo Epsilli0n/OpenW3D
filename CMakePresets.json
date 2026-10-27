@@ -25,8 +25,11 @@
             "hidden": false,
             "displayName": "Windows builds",
             "cacheVariables": {
-                "W3D_COMPILER_FLAGS": "/W3"
-            }
+                "W3D_COMPILER_FLAGS": "/W3",
+                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+                "VCPKG_MANIFEST_DIR": "${sourceDir}/dev/vcpkg-media"
+            },
+            "description": "Gets FFmpeg and OpenAL through vcpkg (needs VCPKG_ROOT, which Visual Studio developer shells set) for sound and movies."
         },
         {
             "name": "vs2026",
@@ -39,24 +42,6 @@
                 "type": "equals",
                 "lhs": "${hostSystemName}",
                 "rhs": "Windows"
-            }
-        },
-        {
-            "name": "win-media",
-            "inherits": "win",
-            "displayName": "Windows + OpenAL/FFmpeg (x64)",
-            "description": "Real audio and movie playback through OpenAL and FFmpeg, installed with vcpkg from dev/vcpkg-media.",
-            "condition": {
-                "type": "equals",
-                "lhs": "${hostSystemName}",
-                "rhs": "Windows"
-            },
-            "cacheVariables": {
-                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-                "VCPKG_TARGET_TRIPLET": "x64-windows",
-                "VCPKG_MANIFEST_DIR": "${sourceDir}/dev/vcpkg-media",
-                "W3D_BUILD_OPTION_FFMPEG": "ON",
-                "W3D_BUILD_OPTION_OPENAL": "ON"
             }
         },
         {
@@ -73,7 +58,8 @@
                 "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
                 "VCPKG_TARGET_TRIPLET": "x64-windows",
                 "VCPKG_INSTALLED_DIR": "C:/vcpkg.installed",
-                "W3D_BUILD_QT_TOOLS": "ON"
+                "W3D_BUILD_QT_TOOLS": "ON",
+                "VCPKG_MANIFEST_DIR": "${sourceDir}"
             }
         },
         {
