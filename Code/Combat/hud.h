@@ -40,12 +40,15 @@
 #ifndef	ALWAYS_H
 	#include "always.h"
 #endif
+#include "rect.h"
 
 /*
 **
 */
 class	ChunkSaveClass;
 class	ChunkLoadClass;
+class	Font3DInstanceClass;
+class	Render2DSentenceClass;
 
 /*
 **
@@ -84,6 +87,18 @@ public:
 
 	// Damage rendering support
 	static	void	Damage_Render( void );
+
+	// HUD scaling. The HUD layout uses fixed pixel offsets and bitmap fonts made for
+	// 800x600. On larger screens it is laid out in "HUD units" of Get_Scale() pixels, so it
+	// grows with resolution. The scale comes from HUDScale in the [RenderDevice] config
+	// section; 0 or missing picks a whole number from the screen height.
+	static	float					Get_Scale( void );
+	// The screen in HUD units: (0, 0) to (width / scale, height / scale).
+	static	const RectClass &	Get_Screen_Rect( void );
+	// Prepare renderers that draw in HUD units: point-sample bitmap fonts at whole-number
+	// scales, and give sentence renderers the HUD coordinate scale.
+	static	void					Configure_Font( Font3DInstanceClass * font );
+	static	void					Configure_Sentence( Render2DSentenceClass * renderer );
 };
 
 #endif

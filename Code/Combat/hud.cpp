@@ -65,8 +65,82 @@
 #include "string_ids.h"
 #include "gametype.h"
 #include "stylemgr.h"
+#include "registry.h"
+
+#include <cmath>
 
 #define INVALID_HUD_WEAPON ((WeaponClass *)(uintptr_t)-1)
+
+/*
+** HUD scaling
+*/
+static const char *	HUD_CONFIG_SECTION	= "RenderDevice";	// APPLICATION_SUB_KEY_NAME_RENDER
+static const char *	HUD_CONFIG_SCALE		= "HUDScale";
+static float			_HUDScale				= 1.0f;
+static RectClass		_HUDScreenRect;
+static RectClass		_HUDScaleSourceRect( 0, 0, 0, 0 );
+static float			_HUDScaleSetting		= -1.0f;		// -1: not read yet
+
+static void Update_HUD_Scale( void )
+{
+	const RectClass & screen = Render2DClass::Get_Screen_Resolution();
+	if ( _HUDScaleSetting >= 0.0f && screen.Left == _HUDScaleSourceRect.Left && screen.Top == _HUDScaleSourceRect.Top &&
+		  screen.Right == _HUDScaleSourceRect.Right && screen.Bottom == _HUDScaleSourceRect.Bottom ) {
+		return;
+	}
+	_HUDScaleSourceRect = screen;
+
+	if ( _HUDScaleSetting < 0.0f ) {
+		RegistryClass registry( HUD_CONFIG_SECTION, false );
+		_HUDScaleSetting = registry.Is_Valid() ? registry.Get_Float( HUD_CONFIG_SCALE, 0.0f ) : 0.0f;
+		if ( _HUDScaleSetting < 0.0f ) {
+			_HUDScaleSetting = 0.0f;
+		}
+	}
+
+	float scale = _HUDScaleSetting;
+	if ( scale <= 0.0f ) {
+		// Whole-number scale so the bitmap fonts stay crisp: 1x up to ~1000 lines,
+		// 2x at 1080p and 1440p, 3x at 2160p.
+		scale = WWMath::Floor( screen.Height() / 600.0f + 0.25f );
+	}
+	// Keep at least 480 HUD units of height so the layout still fits.
+	scale = WWMath::Clamp( scale, 1.0f, std::max( 1.0f, screen.Height() / 480.0f ) );
+	_HUDScale = scale;
+
+	_HUDScreenRect = screen;
+	_HUDScreenRect.Scale( 1.0f / scale );
+	_HUDScreenRect.Left = WWMath::Floor( _HUDScreenRect.Left );
+	_HUDScreenRect.Top = WWMath::Floor( _HUDScreenRect.Top );
+}
+
+float	HUDClass::Get_Scale( void )
+{
+	Update_HUD_Scale();
+	return _HUDScale;
+}
+
+const RectClass & HUDClass::Get_Screen_Rect( void )
+{
+	Update_HUD_Scale();
+	return _HUDScreenRect;
+}
+
+// Bitmap fonts magnified by a whole number look sharp with point sampling.
+void HUDClass::Configure_Font( Font3DInstanceClass * font )
+{
+	const float scale = HUDClass::Get_Scale();
+	if ( font != nullptr && font->Peek_Texture() != nullptr && scale > 1.0f && scale == WWMath::Floor( scale ) ) {
+		font->Peek_Texture()->Set_Mag_Filter( TextureClass::FILTER_TYPE_NONE );
+	}
+}
+
+void HUDClass::Configure_Sentence( Render2DSentenceClass * renderer )
+{
+	if ( renderer != nullptr ) {
+		renderer->Set_Coordinate_Scale( HUDClass::Get_Scale() );
+	}
+}
 
 
 static void Generate_WChar_Text_From_Number(unichar_t* text,int digits,int min_digits,int value)
@@ -216,7 +290,7 @@ Vector2 TARGET_NAME_OFFSET( 125, 24 );
 
 
 	// Reticle
-#define	RETICLE_WIDTH	(64.0f/640.0f)
+#define	RETICLE_WIDTH	(RETICLE_HEIGHT * Render2DClass::Get_Screen_Resolution().Height() / Render2DClass::Get_Screen_Resolution().Width())
 #define	RETICLE_HEIGHT	(64.0f/480.0f)
 
 
@@ -316,11 +390,12 @@ static	void	Powerup_Init( void )
 {
 	PowerupBoxRenderer = new Render2DClass();
 	PowerupBoxRenderer->Set_Texture( HUD_CHATPBOX_TEXTURE );
-	PowerupBoxRenderer->Set_Coordinate_Range( Render2DClass::Get_Screen_Resolution() );
+	PowerupBoxRenderer->Set_Coordinate_Range( HUDClass::Get_Screen_Rect() );
 	PowerupBoxRenderer->Enable_Additive( true );
 
 	FontCharsClass * font = StyleMgrClass::Peek_Font( StyleMgrClass::FONT_INGAME_TXT );
 	PowerupTextRenderer = new Render2DSentenceClass();
+	HUDClass::Configure_Sentence( PowerupTextRenderer );
 	PowerupTextRenderer->Set_Font( font );
 
 	WWASSERT( LeftPowerupIconList.Count() == 0 );
@@ -353,7 +428,7 @@ static	void	Powerup_Add( const unichar_t * name, int number, const char * textur
 	StringClass new_name(true);
 	Strip_Path_From_Filename( new_name, texture_name );
 	data->Renderer->Set_Texture( new_name );
-	data->Renderer->Set_Coordinate_Range( Render2DClass::Get_Screen_Resolution() );
+	data->Renderer->Set_Coordinate_Range( HUDClass::Get_Screen_Rect() );
 //	data->Renderer->Enable_Additive( true );
 
 //	SurfaceClass::SurfaceDescription surface_desc;
@@ -436,7 +511,7 @@ static	void	Powerup_Update( void )
 	}
 
  	RectClass box( POWERUP_BOX_UV_UL, POWERUP_BOX_UV_LR );
-	Vector2 start = Render2DClass::Get_Screen_Resolution().Lower_Right() - Vector2( POWERUP_BOX_BASE );
+	Vector2 start = HUDClass::Get_Screen_Rect().Lower_Right() - Vector2( POWERUP_BOX_BASE );
 	box += start - box.Lower_Left();
 	box -= Vector2( box.Left - 6, +75 );
 
@@ -494,7 +569,7 @@ static	void	Powerup_Update( void )
 
 	// Setup box for right
  	box = RectClass( POWERUP_BOX_UV_UL, POWERUP_BOX_UV_LR );
-	start = Render2DClass::Get_Screen_Resolution().Lower_Right() - Vector2( POWERUP_BOX_BASE );
+	start = HUDClass::Get_Screen_Rect().Lower_Right() - Vector2( POWERUP_BOX_BASE );
 	box += start - box.Lower_Left();
 
 	for ( i = 0; i < MAX_ICONS && i < RightPowerupIconList.Count(); i++ ) {
@@ -522,8 +597,8 @@ static	void	Powerup_Update( void )
 		PowerupTextRenderer->Build_Sentence( RightPowerupIconList[i]->Name );
 		float left_edge = draw_box.Left + 1;
 		Vector2 extents = PowerupTextRenderer->Get_Text_Extents( RightPowerupIconList[i]->Name );
-		if ( left_edge + extents.X + 1> Render2DClass::Get_Screen_Resolution().Right ) {
-			left_edge = Render2DClass::Get_Screen_Resolution().Right - extents.X - 1;
+		if ( left_edge + extents.X + 1> HUDClass::Get_Screen_Rect().Right ) {
+			left_edge = HUDClass::Get_Screen_Rect().Right - extents.X - 1;
 		}
 		PowerupTextRenderer->Set_Location( Vector2( left_edge, draw_box.Top + POWERUP_BOX_HEIGHT - 15 ) );
 		PowerupTextRenderer->Draw_Sentence( white );
@@ -604,6 +679,7 @@ static void HUD_Help_Text_Init( void )
 	//	Configure the renderer
 	//
 	HUDHelpTextRenderer = new Render2DSentenceClass;
+	HUDClass::Configure_Sentence( HUDHelpTextRenderer );
 	HUDHelpTextRenderer->Set_Font( font );
 	HUDHelpTextExtents.Set (0, 0);
 	HUDHelpTextTimer = 0;
@@ -644,7 +720,7 @@ static	void	HUD_Help_Text_Render( void )
 		//
 		Vector2 reticle_offset = COMBAT_CAMERA->Get_Camera_Target_2D_Offset();
 
-		const RectClass &screen_rect = Render2DClass::Get_Screen_Resolution();
+		const RectClass &screen_rect = HUDClass::Get_Screen_Rect();
 		float x_pos = screen_rect.Center ().X - (HUDHelpTextExtents.X * 0.5F);
 		float y_pos = screen_rect.Center ().Y - (HUDHelpTextExtents.Y);
 		y_pos -= (RETICLE_HEIGHT * screen_rect.Height () * 0.25F);
@@ -702,32 +778,35 @@ static	void	Weapon_Init( void )
 {
 	WeaponBoxRenderer = new Render2DClass();
 	WeaponBoxRenderer->Set_Texture( HUD_MAIN_TEXTURE );
-	WeaponBoxRenderer->Set_Coordinate_Range( Render2DClass::Get_Screen_Resolution() );
+	WeaponBoxRenderer->Set_Coordinate_Range( HUDClass::Get_Screen_Rect() );
 	RectClass box_uv( WEAPON_BOX_UV_UL, WEAPON_BOX_UV_LR );
 	RectClass draw_box = box_uv;
 	box_uv.Scale( Vector2( 1.0f/256.0f, 1.0f/256.0f ) );
-	draw_box += Render2DClass::Get_Screen_Resolution().Lower_Right() - Vector2( WEAPON_OFFSET ) - draw_box.Upper_Left();
+	draw_box += HUDClass::Get_Screen_Rect().Lower_Right() - Vector2( WEAPON_OFFSET ) - draw_box.Upper_Left();
 	WeaponBoxRenderer->Add_Quad( draw_box, box_uv );
 	WeaponBase = draw_box.Upper_Left();
 
 	WeaponImageRenderer = new Render2DClass();
-	WeaponImageRenderer->Set_Coordinate_Range( Render2DClass::Get_Screen_Resolution() );
+	WeaponImageRenderer->Set_Coordinate_Range( HUDClass::Get_Screen_Rect() );
 
 	FontCharsClass *chars_font = StyleMgrClass::Peek_Font( StyleMgrClass::FONT_INGAME_TXT );
 	WeaponNameRenderer = new Render2DSentenceClass();
+	HUDClass::Configure_Sentence( WeaponNameRenderer );
 	WeaponNameRenderer->Set_Font( chars_font );
-//	WeaponNameRenderer->Set_Coordinate_Range( Render2DClass::Get_Screen_Resolution() );
+//	WeaponNameRenderer->Set_Coordinate_Range( HUDClass::Get_Screen_Rect() );
 
 	Font3DInstanceClass * font = WW3DAssetManager::Get_Instance()->Get_Font3DInstance( LARGE_FONT );
+	HUDClass::Configure_Font( font );
 	SET_REF_OWNER( font );
 	WeaponClipCountRenderer = new Render2DTextClass( font );
-	WeaponClipCountRenderer->Set_Coordinate_Range( Render2DClass::Get_Screen_Resolution() );
+	WeaponClipCountRenderer->Set_Coordinate_Range( HUDClass::Get_Screen_Rect() );
 	font->Release_Ref();
 
 	font = WW3DAssetManager::Get_Instance()->Get_Font3DInstance( SMALL_FONT );
+	HUDClass::Configure_Font( font );
 	SET_REF_OWNER( font );
 	WeaponTotalCountRenderer = new Render2DTextClass( font );
-	WeaponTotalCountRenderer->Set_Coordinate_Range( Render2DClass::Get_Screen_Resolution() );
+	WeaponTotalCountRenderer->Set_Coordinate_Range( HUDClass::Get_Screen_Rect() );
 	font->Release_Ref();
 
 	_LastHUDWeapon = nullptr;
@@ -820,7 +899,7 @@ static	void	Weapon_Update( void )
 		if ( CenterClipCountTimer > 0 ) {
 			// Also draw the above at the center
 
-			Vector2	center_clip_count_offset = Render2DClass::Get_Screen_Resolution().Center();
+			Vector2	center_clip_count_offset = HUDClass::Get_Screen_Rect().Center();
 			center_clip_count_offset.X *= 1.5;
 
 			float fade = WWMath::Clamp( CenterClipCountTimer, 0, 1 );
@@ -881,7 +960,7 @@ static	void	Weapon_Update( void )
 			WideStringClass name(COMBAT_STAR->Get_Vehicle()->Get_Vehicle_Name(),true);
 			WeaponNameRenderer->Build_Sentence( name );
 			Vector2 text_size = WeaponNameRenderer->Get_Text_Extents( name );
-			WeaponNameRenderer->Set_Location( Render2DClass::Get_Screen_Resolution().Lower_Right() - text_size );
+			WeaponNameRenderer->Set_Location( HUDClass::Get_Screen_Rect().Lower_Right() - text_size );
 			WeaponNameRenderer->Draw_Sentence();
 
 		}
@@ -949,7 +1028,7 @@ static	void	Weapon_Update( void )
 			name = TranslateDBClass::Get_String( def->IconNameID );
 			WeaponNameRenderer->Build_Sentence( name );
 			Vector2 text_size = WeaponNameRenderer->Get_Text_Extents( name ) + Vector2( 1, 0 );
-			WeaponNameRenderer->Set_Location( Render2DClass::Get_Screen_Resolution().Lower_Right() - text_size );
+			WeaponNameRenderer->Set_Location( HUDClass::Get_Screen_Rect().Lower_Right() - text_size );
 			WeaponNameRenderer->Draw_Sentence();
 		}
 	}
@@ -978,10 +1057,11 @@ static	void	Weapon_Chart_Init( void )
 {
 	WeaponChartBoxRenderer = new Render2DClass();
 	WeaponChartBoxRenderer->Enable_Texturing( false );
-	WeaponChartBoxRenderer->Set_Coordinate_Range( Render2DClass::Get_Screen_Resolution() );
+	WeaponChartBoxRenderer->Set_Coordinate_Range( HUDClass::Get_Screen_Rect() );
 
 	FontCharsClass *chars_font = StyleMgrClass::Peek_Font( StyleMgrClass::FONT_INGAME_TXT );
 	WeaponChartKeynameRenderer = new Render2DSentenceClass();
+	HUDClass::Configure_Sentence( WeaponChartKeynameRenderer );
 	WeaponChartKeynameRenderer->Set_Font( chars_font );
 }
 
@@ -1023,7 +1103,7 @@ static	void	Build_Weapon_Chart_Icons( void )
 
 	Clear_Weapon_Chart_Icons();
 
-	float screen_scale = Render2DClass::Get_Screen_Resolution().Width();
+	float screen_scale = HUDClass::Get_Screen_Rect().Width();
 	Vector2	pos = WeaponChartBase * screen_scale;
 
 	// For each column...
@@ -1071,7 +1151,7 @@ static	void	Build_Weapon_Chart_Icons( void )
 				// Draw Icon
 				Render2DClass * renderer = new Render2DClass();
 				WeaponChartIcons.Add( renderer );
-				renderer->Set_Coordinate_Range( Render2DClass::Get_Screen_Resolution() );
+				renderer->Set_Coordinate_Range( HUDClass::Get_Screen_Rect() );
 				StringClass new_name(true);
 				Strip_Path_From_Filename( new_name, filename );
 				renderer->Set_Texture( new_name );
@@ -1221,7 +1301,7 @@ static	void	Damage_Init( void )
 {
 	DamageRenderer = new Render2DClass();
 	DamageRenderer->Set_Texture( HUD_MAIN_TEXTURE );
-	DamageRenderer->Set_Coordinate_Range( Render2DClass::Get_Screen_Resolution() );
+	DamageRenderer->Set_Coordinate_Range( HUDClass::Get_Screen_Rect() );
 	DamageRenderer->Enable_Additive( true );
 
 	Damage_Reset();
@@ -1251,8 +1331,8 @@ static	void	Damage_Add_Indicator( int index, float start_x, float start_y, float
 
 	for ( int i = 0; i < 4; i++ ) {
 		// Numbers are -0.5 to 0.5, switch them to pixels, to match the info_renderer mode
-		vert[i].X	= (vert[i].X + 0.5f) * Render2DClass::Get_Screen_Resolution().Width();
-		vert[i].Y	= (vert[i].Y + 0.5f) * Render2DClass::Get_Screen_Resolution().Height();
+		vert[i].X	= (vert[i].X + 0.5f) * HUDClass::Get_Screen_Rect().Width();
+		vert[i].Y	= (vert[i].Y + 0.5f) * HUDClass::Get_Screen_Rect().Height();
 	}
 
 	RectClass uv( DAMAGE_1_UV_UL, DAMAGE_1_UV_LR );
@@ -1378,18 +1458,20 @@ static	void	Target_Init( void )
 {
 	TargetRenderer = new Render2DClass();
 	TargetRenderer->Set_Texture( HUD_MAIN_TEXTURE );
-	TargetRenderer->Set_Coordinate_Range( Render2DClass::Get_Screen_Resolution() );
+	TargetRenderer->Set_Coordinate_Range( HUDClass::Get_Screen_Rect() );
 
 	TargetBoxRenderer = new Render2DClass();
 	TargetBoxRenderer->Enable_Texturing( false );
-	TargetBoxRenderer->Set_Coordinate_Range( Render2DClass::Get_Screen_Resolution() );
+	TargetBoxRenderer->Set_Coordinate_Range( HUDClass::Get_Screen_Rect() );
 
 	FontCharsClass *chars_font = StyleMgrClass::Peek_Font( StyleMgrClass::FONT_INGAME_TXT );
 	TargetNameRenderer = new Render2DSentenceClass();
+	HUDClass::Configure_Sentence( TargetNameRenderer );
 	TargetNameRenderer->Set_Font( chars_font );
 	InfoDebugRenderer = new Render2DSentenceClass();
+	HUDClass::Configure_Sentence( InfoDebugRenderer );
 	InfoDebugRenderer->Set_Font( chars_font );
-//	TargetNameRenderer->Set_Coordinate_Range( Render2DClass::Get_Screen_Resolution() );
+//	TargetNameRenderer->Set_Coordinate_Range( HUDClass::Get_Screen_Rect() );
 }
 
 
@@ -1458,7 +1540,7 @@ static	void	Target_Update( void )
 				}
 			}
 
-			RectClass box = Render2DClass::Get_Screen_Resolution();
+			RectClass box = HUDClass::Get_Screen_Rect();
 
 			if ( obj->As_PhysicalGameObj() ) {
 				box = Get_Target_Box( obj->As_PhysicalGameObj() );
@@ -1469,8 +1551,8 @@ static	void	Target_Update( void )
 				Vector2 new_center = (COMBAT_CAMERA->Get_Camera_Target_2D_Offset() * 0.5f );
 				new_center.Y *= -1.0f;
 				new_center += Vector2( 0.5f, 0.5f );
-				new_center.X *= Render2DClass::Get_Screen_Resolution().Right;
-				new_center.Y *= Render2DClass::Get_Screen_Resolution().Bottom;
+				new_center.X *= HUDClass::Get_Screen_Rect().Right;
+				new_center.Y *= HUDClass::Get_Screen_Rect().Bottom;
 				box += new_center - box.Center();
 			}
 
@@ -1481,7 +1563,7 @@ static	void	Target_Update( void )
 			box.Snap_To_Units( Vector2( 1, 1 ) );
 
 			// Clamp box to fit on screen;
-			RectClass res = Render2DClass::Get_Screen_Resolution();
+			RectClass res = HUDClass::Get_Screen_Rect();
 			if ( box.Top < 0 ) {
 				box.Top = 0;
 			}
@@ -1775,7 +1857,7 @@ static RectClass Get_Target_Box( PhysicalGameObj * obj )
 	}
 
 	// Get Box in proper convention
-	RectClass	screen = Render2DClass::Get_Screen_Resolution();
+	RectClass	screen = HUDClass::Get_Screen_Rect();
 	top.X = top.X * 0.5f + 0.5f;
 	top.Y = top.Y * -0.5f + 0.5f;
 	bottom.X = bottom.X * 0.5f + 0.5f;
@@ -1811,9 +1893,10 @@ Render2DTextClass * ScoreRenderer;
 static	void	Score_Init( void )
 {
 	Font3DInstanceClass * font = WW3DAssetManager::Get_Instance()->Get_Font3DInstance( LARGE_FONT );
+	HUDClass::Configure_Font( font );
 	SET_REF_OWNER( font );
 	ScoreRenderer = new Render2DTextClass( font );
-	ScoreRenderer->Set_Coordinate_Range( Render2DClass::Get_Screen_Resolution() );
+	ScoreRenderer->Set_Coordinate_Range( HUDClass::Get_Screen_Rect() );
 	font->Release_Ref();
 }
 
@@ -1835,8 +1918,8 @@ static	void	Score_Update( void )
 		unichar_t score_string[12];	// 12 digits ought to be enough...
 		Generate_WChar_Text_From_Number(score_string,sizeof(score_string),false,score);
 
-		Vector2 position = Render2DClass::Get_Screen_Resolution().Center();
-		position.Y = Render2DClass::Get_Screen_Resolution().Bottom;
+		Vector2 position = HUDClass::Get_Screen_Rect().Center();
+		position.Y = HUDClass::Get_Screen_Rect().Bottom;
 		Vector2 size = ScoreRenderer->Get_Text_Extents( score_string );
 		size.X *= 0.5f;
 		position -= size;
@@ -1870,10 +1953,11 @@ static	void	Objective_Init( void )
 {
 	ObjectiveArrowRenderer = new Render2DClass();
 	ObjectiveArrowRenderer->Set_Texture( OBJECTIVE_ARROW_TEXTURE );
-	ObjectiveArrowRenderer->Set_Coordinate_Range( Render2DClass::Get_Screen_Resolution() );
+	ObjectiveArrowRenderer->Set_Coordinate_Range( HUDClass::Get_Screen_Rect() );
 
 	FontCharsClass *font = StyleMgrClass::Peek_Font( StyleMgrClass::FONT_INGAME_TXT );
 	ObjectiveTextRenderer = new Render2DSentenceClass();
+	HUDClass::Configure_Sentence( ObjectiveTextRenderer );
 	ObjectiveTextRenderer->Set_Font( font );
 
 	CurrentObjectiveIndex=0;
@@ -1907,7 +1991,7 @@ static	void	Objective_Shutdown( void )
 static	void	Objective_Update( void )
 {
 	RectClass	pog_box( 0, 0, 64, 64 );
-	pog_box += Render2DClass::Get_Screen_Resolution().Upper_Right() - pog_box.Upper_Right();
+	pog_box += HUDClass::Get_Screen_Rect().Upper_Right() - pog_box.Upper_Right();
 	pog_box += Vector2( -16, 8 );
 
 #define	POG_SPACING		Vector2( 10, 0 )
@@ -1970,10 +2054,10 @@ static	void	Objective_Update( void )
 			Render2DClass * renderer = new Render2DClass();
 			if ( renderer ) {
 				renderer->Set_Texture( ObjectiveManager::Get_HUD_Objectives_Pog_Texture_Name( index ) );
-				renderer->Set_Coordinate_Range( Render2DClass::Get_Screen_Resolution() );
+				renderer->Set_Coordinate_Range( HUDClass::Get_Screen_Rect() );
 				float	age = ObjectiveManager::Get_HUD_Objectives_Age( index );
 				if ( age < POG_FLY_TIME ) {
-					Vector2 offset = Render2DClass::Get_Screen_Resolution().Center() - Render2DClass::Get_Screen_Resolution().Upper_Right();
+					Vector2 offset = HUDClass::Get_Screen_Rect().Center() - HUDClass::Get_Screen_Rect().Upper_Right();
 					offset.X *= 0.75f;
 					float fly = WWMath::Clamp( (2.0f-(2.0f*age/POG_FLY_TIME)), 0, 1 );
 					offset *= fly;
@@ -1986,13 +2070,13 @@ static	void	Objective_Update( void )
 					Render2DClass * star_renderer = new Render2DClass();
 					if ( star_renderer ) {
 						star_renderer->Set_Texture( "HUD_STAR.TGA" );
-						star_renderer->Set_Coordinate_Range( Render2DClass::Get_Screen_Resolution() );
+						star_renderer->Set_Coordinate_Range( HUDClass::Get_Screen_Rect() );
 
 						RectClass	star_box( -32, -32, 32, 32 );
 						star_box.Scale( fly );
 
-						Vector2	star_fly_start = Render2DClass::Get_Screen_Resolution().Center();
-						Vector2	star_fly_end = Render2DClass::Get_Screen_Resolution().Lower_Left();
+						Vector2	star_fly_start = HUDClass::Get_Screen_Rect().Center();
+						Vector2	star_fly_end = HUDClass::Get_Screen_Rect().Lower_Left();
 						star_fly_start.X *= 0.85f;
 						star_fly_start.Y *= 1.175f;
 						star_fly_end.X += 40.0f;
@@ -2270,21 +2354,23 @@ static	void	Info_Init( void )
 
 	InfoRenderer = new Render2DClass();
 	InfoRenderer->Set_Texture( HUD_MAIN_TEXTURE );
-	InfoRenderer->Set_Coordinate_Range( Render2DClass::Get_Screen_Resolution() );
+	InfoRenderer->Set_Coordinate_Range( HUDClass::Get_Screen_Rect() );
 
 	Font3DInstanceClass * font = WW3DAssetManager::Get_Instance()->Get_Font3DInstance( LARGE_FONT );
+	HUDClass::Configure_Font( font );
 	SET_REF_OWNER( font );
 	InfoHealthCountRenderer = new Render2DTextClass( font );
-	InfoHealthCountRenderer->Set_Coordinate_Range( Render2DClass::Get_Screen_Resolution() );
+	InfoHealthCountRenderer->Set_Coordinate_Range( HUDClass::Get_Screen_Rect() );
 	font->Release_Ref();
 
 	font = WW3DAssetManager::Get_Instance()->Get_Font3DInstance( SMALL_FONT );
+	HUDClass::Configure_Font( font );
 	SET_REF_OWNER( font );
 	InfoShieldCountRenderer = new Render2DTextClass( font );
-	InfoShieldCountRenderer->Set_Coordinate_Range( Render2DClass::Get_Screen_Resolution() );
+	InfoShieldCountRenderer->Set_Coordinate_Range( HUDClass::Get_Screen_Rect() );
 	font->Release_Ref();
 
-	InfoBase = Render2DClass::Get_Screen_Resolution().Lower_Left() + Vector2( INFO_OFFSET );
+	InfoBase = HUDClass::Get_Screen_Rect().Lower_Left() + Vector2( INFO_OFFSET );
 }
 
 static	void	Info_Shutdown( void )
@@ -2400,7 +2486,7 @@ static	void	Info_Update_Health_Shield( void )
 	if ( CenterHealthTimer > 0 ) {
 		// Also draw the above at the center
 
-		Vector2	health_center_offset = Render2DClass::Get_Screen_Resolution().Center();
+		Vector2	health_center_offset = HUDClass::Get_Screen_Rect().Center();
 		health_center_offset.X *= 0.5;
 		health_center_offset.Y -= draw.Height() / 2;
 
@@ -2716,21 +2802,21 @@ void 	HUDClass::Init(bool render_available)
 	RenderImages[RETICLE_HIT]->Set_Hidden( true );
 	// Action Status Bar (arming/disarming explosives, etc)
 	RenderImages[ACTION_STATUSBAR_RENDERER] = new Render2DClass();
-	RenderImages[ACTION_STATUSBAR_RENDERER]->Set_Coordinate_Range( Render2DClass::Get_Screen_Resolution() );
+	RenderImages[ACTION_STATUSBAR_RENDERER]->Set_Coordinate_Range( HUDClass::Get_Screen_Rect() );
 #else
-	RectClass rect=Render2DClass::Get_Screen_Resolution();
+	RectClass rect=HUDClass::Get_Screen_Rect();
 
 	RenderImages[DEMO_HUD_IMAGE] = new Render2DClass();
 	RenderImages[DEMO_HUD_IMAGE]->Reset();
 	RenderImages[DEMO_HUD_IMAGE]->Set_Texture( "renegade_demo.tga" );
 	RenderImages[DEMO_HUD_IMAGE]->Set_Hidden( false );
-	RenderImages[DEMO_HUD_IMAGE]->Set_Coordinate_Range( Render2DClass::Get_Screen_Resolution() );
+	RenderImages[DEMO_HUD_IMAGE]->Set_Coordinate_Range( HUDClass::Get_Screen_Rect() );
 	RenderImages[DEMO_HUD_IMAGE]->Add_Quad( RectClass( float(8),float(-8),float(256+8),float(128-8)), RectClass(0.0f,0.0f,1.0f,0.5f),0xffffffff);
 	RenderImages[DEMO_HUD_IMAGE2] = new Render2DClass();
 	RenderImages[DEMO_HUD_IMAGE2]->Reset();
 	RenderImages[DEMO_HUD_IMAGE2]->Set_Texture( "renegade_demo.tga" );
 	RenderImages[DEMO_HUD_IMAGE2]->Set_Hidden( false );
-	RenderImages[DEMO_HUD_IMAGE2]->Set_Coordinate_Range( Render2DClass::Get_Screen_Resolution() );
+	RenderImages[DEMO_HUD_IMAGE2]->Set_Coordinate_Range( HUDClass::Get_Screen_Rect() );
 	RenderImages[DEMO_HUD_IMAGE2]->Add_Quad( RectClass( rect.Right+float(-256-8),rect.Bottom+float(-128+8),rect.Right+float(-8),rect.Bottom+float(8)), RectClass(0.0f,0.5f,1.0f,1.0f),0xffffffff);
 #endif
 
@@ -2858,7 +2944,7 @@ void 	HUDClass::Think()
 		//
 		//	Plot the rectangle
 		//
-		const RectClass &screen_rect = Render2DClass::Get_Screen_Resolution();
+		const RectClass &screen_rect = HUDClass::Get_Screen_Rect();
 		RectClass status_bar_rect (0.4F, 0.95F, 0.6F, 0.98F);
 		status_bar_rect.Left		= WWMath::Trunc(status_bar_rect.Left * screen_rect.Width());
 		status_bar_rect.Right	= WWMath::Trunc(status_bar_rect.Right * screen_rect.Width());
@@ -2972,7 +3058,7 @@ void 	HUDClass::Think()
 		StringClass	pointstring;
 		int points = _HUDPoints;
 		if ( points ) {
-			Vector2 position = Render2DClass::Get_Screen_Resolution().Lower_Right();
+			Vector2 position = HUDClass::Get_Screen_Rect().Lower_Right();
 			position /= 2;
 			float scale = WWMath::Clamp( 2 * _HUDTimer / HUD_POINTS_TIME, 0, 1 );
 			position.Y *= 0.3f + (scale/2);

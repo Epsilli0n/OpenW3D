@@ -34,6 +34,7 @@
  * Functions:                                                                                  *
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
+#include "hud.h"
 #include "playermanager.h"
 
 #include <win.h>
@@ -85,6 +86,7 @@ void cPlayerManager::Onetime_Init(void)
 		WWASSERT(PFont == nullptr);
 		WWASSERT(WW3DAssetManager::Get_Instance() != nullptr);
    	PFont = WW3DAssetManager::Get_Instance()->Get_Font3DInstance("FONT6x8.TGA");
+   	HUDClass::Configure_Font(PFont);
    	WWASSERT(PFont != nullptr);
 		PFont->Set_Mono_Spaced();
 		SET_REF_OWNER(PFont);
@@ -92,7 +94,7 @@ void cPlayerManager::Onetime_Init(void)
 		WWASSERT(PTextRenderer == nullptr);
 		PTextRenderer = new Render2DTextClass(PFont);
    	WWASSERT(PTextRenderer != nullptr);
-		PTextRenderer->Set_Coordinate_Range(Render2DClass::Get_Screen_Resolution());
+		PTextRenderer->Set_Coordinate_Range(HUDClass::Get_Screen_Rect());
 	}
    memset(Player_Array, 0, sizeof(Player_Array));
 }
@@ -1308,9 +1310,9 @@ void cPlayerManager::Render_Player_List(void)
 	XPos = 0;
 	float text_len = PFont->String_Width(heading);
 	if (The_Game()->IsIntermission.Is_True()) {
-		XPos = int(Render2DClass::Get_Screen_Resolution().Center().X - text_len / 2.0f);
+		XPos = int(HUDClass::Get_Screen_Rect().Center().X - text_len / 2.0f);
 	} else {
-		XPos = int(Render2DClass::Get_Screen_Resolution().Right - 20 - text_len);
+		XPos = int(HUDClass::Get_Screen_Rect().Right - 20 - text_len);
 	}
 
 	//
@@ -1324,7 +1326,7 @@ void cPlayerManager::Render_Player_List(void)
 			cPlayerManager::Compute_Full_Player_List_Height() +
 			2 * PFont->Char_Height() * Y_INCREMENT_FACTOR);
 
-		YPos = (int)(Render2DClass::Get_Screen_Resolution().Height() / 2.0f - combined_height / 2.0f);
+		YPos = (int)(HUDClass::Get_Screen_Rect().Height() / 2.0f - combined_height / 2.0f);
 		if (YPos < 10) {
 			YPos = 10;
 		}
@@ -1339,7 +1341,7 @@ void cPlayerManager::Render_Player_List(void)
 			//
 			WideStringClass text(cGameData::Get_Win_Text(),true);
 
-			float x = Render2DClass::Get_Screen_Resolution().Center().X -
+			float x = HUDClass::Get_Screen_Rect().Center().X -
 				PFont->String_Width(text) / 2.0f;
 			float y = YPos;
 			PTextRenderer->Set_Location(Vector2(cMathUtil::Round(x), cMathUtil::Round(y)));

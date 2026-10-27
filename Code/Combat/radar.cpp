@@ -35,6 +35,7 @@
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 #include "radar.h"
+#include "hud.h"
 #include "assets.h"
 #include "soldier.h"
 #include "gameobjmanager.h"
@@ -138,7 +139,7 @@ void 	RadarManager::Init()
 
 	Renderer = new Render2DClass();
 	Renderer->Set_Texture( RADAR_TEXTURE );
-	Renderer->Set_Coordinate_Range( Render2DClass::Get_Screen_Resolution() );
+	Renderer->Set_Coordinate_Range( HUDClass::Get_Screen_Rect() );
 
 	// Init Colors
 	for ( i = 0; i < NUM_BLIP_COLOR_TYPES; i++ ) {
@@ -431,6 +432,7 @@ void	RadarManager::Update( const Matrix3D & player_tm, const Vector2 & center )
 	// If the renderer object for this particular radar direction hasn't been created, create it now...
 	if (!CompassRenderers[CurrentCompassRendererIndex]) {
 		CompassRenderers[CurrentCompassRendererIndex]=new Render2DSentenceClass();
+		CompassRenderers[CurrentCompassRendererIndex]->Set_Coordinate_Scale(HUDClass::Get_Scale());
 		FontCharsClass *font = StyleMgrClass::Peek_Font( StyleMgrClass::FONT_INGAME_TXT );
 		CompassRenderers[CurrentCompassRendererIndex]->Set_Font( font );
 		CompassRenderers[CurrentCompassRendererIndex]->Reset();

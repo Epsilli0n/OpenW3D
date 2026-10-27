@@ -34,6 +34,7 @@
  * Functions:                                                                                  *
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
+#include "hud.h"
 #include "multihud.h"
 
 #include <stdio.h>
@@ -108,15 +109,18 @@ void MultiHUDClass::Init(void)
 #ifdef WWDEBUG
 		WWASSERT(WW3DAssetManager::Get_Instance() != nullptr);
    	PFont = WW3DAssetManager::Get_Instance()->Get_Font3DInstance("FONT6x8.TGA");
+   	HUDClass::Configure_Font(PFont);
    	WWASSERT(PFont != nullptr);
 		PFont->Set_Mono_Spaced();
 		SET_REF_OWNER(PFont);
 
 		PTextRenderer = new Render2DTextClass(PFont);
-		PTextRenderer->Set_Coordinate_Range(Render2DClass::Get_Screen_Resolution());
+		PTextRenderer->Set_Coordinate_Range(HUDClass::Get_Screen_Rect());
 #endif
 
 		NameRenderer = new Render2DSentenceClass;
+
+		HUDClass::Configure_Sentence(NameRenderer);
 		StyleMgrClass::Assign_Font(NameRenderer, StyleMgrClass::FONT_INGAME_TXT);
 		NameRenderer->Set_Mono_Spaced(true);
 
@@ -306,8 +310,8 @@ void MultiHUDClass::Show_Player_Names(void)
 		//
 		// adjust x,y from range -1 to 1
 		//
-		text_position_2d.X = (text_position_2d.X + 1) * Render2DClass::Get_Screen_Resolution().Width() / 2;
-		text_position_2d.Y = (1 - text_position_2d.Y) * Render2DClass::Get_Screen_Resolution().Height() / 2;
+		text_position_2d.X = (text_position_2d.X + 1) * HUDClass::Get_Screen_Rect().Width() / 2;
+		text_position_2d.Y = (1 - text_position_2d.Y) * HUDClass::Get_Screen_Rect().Height() / 2;
 
       //
 		// Is this guy nearby?
@@ -494,8 +498,8 @@ void MultiHUDClass::Show_Import_State_Counts(NetworkObjectClass *object)
       Vector3 text_position_2d;
       if (COMBAT_CAMERA->Project(text_position_2d, text_position_3d) == CameraClass::INSIDE_FRUSTUM) {
 
-			text_position_2d.X = (text_position_2d.X + 1) * Render2DClass::Get_Screen_Resolution().Width() / 2;
-			text_position_2d.Y = (1 - text_position_2d.Y) * Render2DClass::Get_Screen_Resolution().Height() / 2;
+			text_position_2d.X = (text_position_2d.X + 1) * HUDClass::Get_Screen_Rect().Width() / 2;
+			text_position_2d.Y = (1 - text_position_2d.Y) * HUDClass::Get_Screen_Rect().Height() / 2;
 
 			StringClass text;
 			StringClass sub_string;
@@ -555,8 +559,8 @@ void MultiHUDClass::Show_Distance_And_Priority(NetworkObjectClass *object)
       	Vector3 text_position_2d;
       	if (COMBAT_CAMERA->Project(text_position_2d, text_position_3d) == CameraClass::INSIDE_FRUSTUM) {
 
-				text_position_2d.X = (text_position_2d.X + 1) * Render2DClass::Get_Screen_Resolution().Width() / 2;
-				text_position_2d.Y = (1 - text_position_2d.Y) * Render2DClass::Get_Screen_Resolution().Height() / 2;
+				text_position_2d.X = (text_position_2d.X + 1) * HUDClass::Get_Screen_Rect().Width() / 2;
+				text_position_2d.Y = (1 - text_position_2d.Y) * HUDClass::Get_Screen_Rect().Height() / 2;
 
 				StringClass text;
 				StringClass sub_string;
@@ -625,8 +629,8 @@ void MultiHUDClass::Show_Player_Rhost_Data(SmartGameObj * smart_obj)
       	Vector3 text_position_2d;
       	if (COMBAT_CAMERA->Project(text_position_2d, text_position_3d) == CameraClass::INSIDE_FRUSTUM) {
 
-				text_position_2d.X = (text_position_2d.X + 1) * Render2DClass::Get_Screen_Resolution().Width() / 2;
-				text_position_2d.Y = (1 - text_position_2d.Y) * Render2DClass::Get_Screen_Resolution().Height() / 2;
+				text_position_2d.X = (text_position_2d.X + 1) * HUDClass::Get_Screen_Rect().Width() / 2;
+				text_position_2d.Y = (1 - text_position_2d.Y) * HUDClass::Get_Screen_Rect().Height() / 2;
 
 				SoldierGameObj * p_soldier = smart_obj->As_SoldierGameObj();
 
@@ -800,8 +804,8 @@ void MultiHUDClass::Show_Description(NetworkObjectClass * p_object, float height
 			if (delta.Length() < max_distance &&
 				COMBAT_CAMERA->Project(text_position_2d, text_position_3d) == CameraClass::INSIDE_FRUSTUM) {
 
-				text_position_2d.X = (text_position_2d.X + 1) * Render2DClass::Get_Screen_Resolution().Width() / 2;
-				text_position_2d.Y = (1 - text_position_2d.Y) * Render2DClass::Get_Screen_Resolution().Height() / 2;
+				text_position_2d.X = (text_position_2d.X + 1) * HUDClass::Get_Screen_Rect().Width() / 2;
+				text_position_2d.Y = (1 - text_position_2d.Y) * HUDClass::Get_Screen_Rect().Height() / 2;
 
 				float x = text_position_2d.X;
 				float y = text_position_2d.Y;
@@ -844,8 +848,8 @@ void MultiHUDClass::Show_Spawner_Data(void)
 				char text[300];
 				::strcpy(text, spawner_list[i]->Get_Definition().Get_Name());
 
-				text_position_2d.X = (text_position_2d.X + 1) * Render2DClass::Get_Screen_Resolution().Width() / 2;
-				text_position_2d.Y = (1 - text_position_2d.Y) * Render2DClass::Get_Screen_Resolution().Height() / 2;
+				text_position_2d.X = (text_position_2d.X + 1) * HUDClass::Get_Screen_Rect().Width() / 2;
+				text_position_2d.Y = (1 - text_position_2d.Y) * HUDClass::Get_Screen_Rect().Height() / 2;
 
 				float x = text_position_2d.X - PTextRenderer->Peek_Font()->String_Width(text) / 2.0f;
 				float y = text_position_2d.Y;
@@ -887,7 +891,7 @@ void MultiHUDClass::Think(void)
 
    Show_Player_Names();
 
-//	BottomTextYPos = Render2DClass::Get_Screen_Resolution().Bottom - 15;
+//	BottomTextYPos = HUDClass::Get_Screen_Rect().Bottom - 15;
 
 	//
 	// From here down its all diagnostics
@@ -983,7 +987,7 @@ void MultiHUDClass::Think(void)
 
 //#endif // WWDEBUG
 
-	//BottomTextYPos = Render2DClass::Get_Screen_Resolution().Bottom - 15;
+	//BottomTextYPos = HUDClass::Get_Screen_Rect().Bottom - 15;
 
 //#ifdef WWDEBUG
    cNetwork::Set_Graphing_Y(64);
