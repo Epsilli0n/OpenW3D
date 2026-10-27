@@ -1105,24 +1105,24 @@ bool DX8Wrapper::Registry_Load_Render_Device( const char * sub_key, bool resize_
 	char	name[ 200 ];
 	int	width,height,depth,windowed;
 
-	if (	Registry_Load_Render_Device(	sub_key,
+	const bool loaded = Registry_Load_Render_Device(	sub_key,
 													name,
 													sizeof(name),
 													width,
 													height,
 													depth,
 													windowed,
-													TextureBitDepth) &&
-			(*name != 0))
+													TextureBitDepth);
+
+	// Validate before any path can save it back; a missing value reads as -1.
+	if (TextureBitDepth!=16 && TextureBitDepth!=32) {
+		WWDEBUG_SAY(( "Invalid texture depth %d, switching to %d bits\n", TextureBitDepth, DEFAULT_TEXTURE_BIT_DEPTH));
+		TextureBitDepth=DEFAULT_TEXTURE_BIT_DEPTH;
+	}
+
+	if (loaded && (*name != 0))
 	{
 		WWDEBUG_SAY(( "Device %s (%d X %d) %d bit windowed:%d\n", name,width,height,depth,windowed));
-
-		if (TextureBitDepth==16 || TextureBitDepth==32) {
-//			WWDEBUG_SAY(( "Texture depth %d\n", TextureBitDepth));
-		} else {
-			WWDEBUG_SAY(( "Invalid texture depth %d, switching to 16 bits\n", TextureBitDepth));
-			TextureBitDepth=16;
-		}
 
 
 //		_RenderDeviceDescriptionTable.
@@ -1186,7 +1186,17 @@ bool DX8Wrapper::Registry_Load_Render_Device( const char * sub_key, bool resize_
 		return true;
 	}
 
-	WWDEBUG_SAY(( "Error getting Registry\n" ));
+	WWDEBUG_SAY(( "No saved render device, using the desktop resolution\n" ));
+
+	// First run: start at the primary adapter's desktop resolution rather than 800x600.
+	D3DDISPLAYMODE desktop;
+	memset(&desktop, 0, sizeof(desktop));
+	if (D3DInterface != nullptr &&
+		SUCCEEDED(D3DInterface->GetAdapterDisplayMode(D3DADAPTER_DEFAULT, &desktop)) &&
+		desktop.Width > 0 && desktop.Height > 0) {
+		ResolutionWidth = static_cast<int>(desktop.Width);
+		ResolutionHeight = static_cast<int>(desktop.Height);
+	}
 
 	return Set_Any_Render_Device();
 }
