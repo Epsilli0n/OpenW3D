@@ -1,5 +1,9 @@
 # Set source files
 set(WW3D2_SRC
+    w3drender.cpp
+    w3drender.h
+    d3d9/w3drender_d3d9.cpp
+    d3d9/w3drender_d3d9.h
     aabtree.cpp
     aabtreebuilder.cpp
     agg_def.cpp
