@@ -36,6 +36,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include <unordered_map>
 #include <vector>
 
 class D3D12RenderDevice;
@@ -252,6 +253,20 @@ struct D3D12PipelineKey
 	bool operator==(const D3D12PipelineKey &other) const { return memcmp(this, &other, sizeof(*this)) == 0; }
 };
 
+struct D3D12PipelineKeyHash
+{
+	size_t operator()(const D3D12PipelineKey &key) const
+	{
+		// FNV-1a over the bytes; keys are zero-filled, so padding is stable.
+		const uint8_t *bytes = reinterpret_cast<const uint8_t *>(&key);
+		uint64_t hash = 14695981039346656037ull;
+		for (size_t i = 0; i < sizeof(key); ++i) {
+			hash = (hash ^ bytes[i]) * 1099511628211ull;
+		}
+		return size_t(hash);
+	}
+};
+
 /*
 ** The device: D3D9-style state tracking on top of D3D12DeviceClass.
 */
@@ -314,7 +329,7 @@ public:
 
 	HRESULT	SetStreamSource(UINT stream, W3DVertexBuffer *buffer, UINT offset, UINT stride) override;
 	HRESULT	SetIndices(W3DIndexBuffer *buffer) override;
-	HRESULT	SetFVF(DWORD fvf) override { FVF = fvf; return D3D_OK; }
+	HRESULT	SetFVF(DWORD fvf) override;
 	HRESULT	DrawIndexedPrimitive(D3DPRIMITIVETYPE type, INT base_vertex, UINT min_index, UINT vertex_count, UINT start_index, UINT primitive_count) override;
 
 	HRESULT	Create_Texture(UINT width, UINT height, UINT mip_levels, DWORD usage, D3DFORMAT format, D3DPOOL pool, W3DTexture **texture) override;
@@ -326,12 +341,6 @@ protected:
 	~D3D12RenderDevice() override;
 
 private:
-	struct Pipeline
-	{
-		D3D12PipelineKey				Key;
-		ComPtr<ID3D12PipelineState>	State;
-	};
-
 	void		Reset_State();
 	bool		Create_Root_Signature();
 	bool		Create_Defaults();
@@ -339,11 +348,13 @@ private:
 	D3D12_GPU_DESCRIPTOR_HANDLE	Get_Sampler(unsigned stage);
 	void		Bind_Targets();
 	void		Fill_Constants(void *data);
+	D3D12PipelineKey	Current_Pipeline_Key() const;
+	void		Mark_All_Dirty();
 	bool		Bind_Geometry(INT &base_vertex, UINT min_index, UINT vertex_count, UINT &start_index, UINT index_count);
 
 	D3D12DeviceClass					Native_Device;
 	ComPtr<ID3D12RootSignature>	RootSignature;
-	std::vector<Pipeline>			Pipelines;
+	std::unordered_map<D3D12PipelineKey, ComPtr<ID3D12PipelineState>, D3D12PipelineKeyHash>	Pipelines;
 	struct SamplerEntry { uint64_t Key; unsigned Index; };
 	std::vector<SamplerEntry>		Samplers;
 	ComPtr<ID3D12Resource>			DefaultVertexData;			// constant inputs for missing vertex elements
@@ -353,6 +364,33 @@ private:
 	unsigned								SyncInterval = 1;
 	uint64_t								BoundEpoch = UINT64_MAX;
 	bool									TargetsDirty = true;
+
+	// What the current command list has recorded, so unchanged state is not set again.
+	struct BoundState
+	{
+		bool									RootSignature = false;
+		bool									DrawConstants = false;
+		bool									Geometry = false;
+		bool									Viewport = false;
+		ID3D12PipelineState *			Pipeline = nullptr;
+		D3D12_GPU_VIRTUAL_ADDRESS		Constants = 0;
+		UINT64								Texture[2] = {};
+		UINT64								Sampler[2] = {};
+		D3D_PRIMITIVE_TOPOLOGY			Topology = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
+		D3D12_VERTEX_BUFFER_VIEW		VertexViews[2] = {};
+		D3D12_INDEX_BUFFER_VIEW			IndexView = {};
+		D3DVIEWPORT9						ViewportState = {};
+	};
+	BoundState							Bound;
+
+	// Derived state, rebuilt only after a setter changes its inputs.
+	bool									PipelineDirty = true;
+	bool									ConstantsDirty = true;		// FFPConstants (b1)
+	bool									DrawConstantsDirty = true;	// world-view and normal matrices (b0)
+	bool									SamplerDirty[2] = { true, true };
+	ID3D12PipelineState *			CurrentPipeline = nullptr;
+	D3D12_GPU_DESCRIPTOR_HANDLE	CurrentSampler[2] = {};
+	std::vector<uint8_t>				SharedConstants;				// copy of the last uploaded FFPConstants
 
 	// Optional statistics (W3D_RENDER_STATS=1), logged every two seconds.
 	struct FrameStats

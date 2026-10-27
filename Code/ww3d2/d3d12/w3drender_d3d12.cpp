@@ -40,7 +40,8 @@ namespace
 
 	enum RootParameter
 	{
-		ROOT_CONSTANTS,
+		ROOT_DRAW,			// b0: per-object root constants
+		ROOT_CONSTANTS,	// b1: shared fixed-function state
 		ROOT_TEXTURE0,
 		ROOT_TEXTURE1,
 		ROOT_SAMPLER0,
@@ -60,10 +61,17 @@ namespace
 		float		Attenuation[4];
 	};
 
-	struct FFPConstantsCB
+	// Layout must match DrawConstants in ffp.hlsl.
+	struct DrawConstantsCB
 	{
 		float		WorldView[16];
-		float		NormalMatrix[16];
+		float		NormalMatrix[12];		// rows of a float3x4
+	};
+	static_assert(sizeof(DrawConstantsCB) % 16 == 0, "root constants must be a whole number of registers");
+	constexpr UINT DRAW_CONSTANT_DWORDS = sizeof(DrawConstantsCB) / 4;
+
+	struct FFPConstantsCB
+	{
 		float		Projection[16];
 		float		TexTransform[MAX_STAGES][16];
 		float		MaterialDiffuse[4];
@@ -406,6 +414,17 @@ void D3D12RenderDevice::Reset_State()
 	StreamStride = 0;
 	FVF = 0;
 	TargetsDirty = true;
+	Mark_All_Dirty();
+}
+
+void D3D12RenderDevice::Mark_All_Dirty()
+{
+	PipelineDirty = true;
+	ConstantsDirty = true;
+	DrawConstantsDirty = true;
+	SamplerDirty[0] = SamplerDirty[1] = true;
+	SharedConstants.resize(sizeof(FFPConstantsCB));
+	Bound = BoundState();
 }
 
 bool D3D12RenderDevice::Init(IDXGIAdapter1 *adapter, HWND window, const D3DPRESENT_PARAMETERS &params)
@@ -457,8 +476,12 @@ bool D3D12RenderDevice::Create_Root_Signature()
 	}
 
 	D3D12_ROOT_PARAMETER params[ROOT_COUNT] = {};
+	params[ROOT_DRAW].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+	params[ROOT_DRAW].Constants.ShaderRegister = 0;
+	params[ROOT_DRAW].Constants.Num32BitValues = DRAW_CONSTANT_DWORDS;
+	params[ROOT_DRAW].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
 	params[ROOT_CONSTANTS].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-	params[ROOT_CONSTANTS].Descriptor.ShaderRegister = 0;
+	params[ROOT_CONSTANTS].Descriptor.ShaderRegister = 1;
 	params[ROOT_CONSTANTS].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 	for (unsigned i = 0; i < 4; ++i) {
 		D3D12_ROOT_PARAMETER &p = params[ROOT_TEXTURE0 + i];
@@ -524,13 +547,16 @@ bool D3D12RenderDevice::Create_Defaults()
 
 void D3D12RenderDevice::Ensure_Frame()
 {
+	// Begin_Frame binds the back buffer and its viewport; a new command list starts empty.
 	if (!Native_Device.Is_In_Frame()) {
 		Native_Device.Begin_Frame();
 		TargetsDirty = true;
+		Bound = BoundState();
 	}
 	if (BoundEpoch != Native_Device.List_Epoch()) {
 		BoundEpoch = Native_Device.List_Epoch();
 		TargetsDirty = true;
+		Bound = BoundState();
 	}
 }
 
@@ -553,14 +579,14 @@ void D3D12RenderDevice::Bind_Targets()
 	const D3D12_CPU_DESCRIPTOR_HANDLE dsv = Native_Device.Depth_DSV();
 	list->OMSetRenderTargets(1, &rtv, FALSE, depth ? &dsv : nullptr);
 	TargetsDirty = false;
+	PipelineDirty = true;	// the key depends on the target size and depth buffer
 }
 
 ID3D12PipelineState *D3D12RenderDevice::Get_Pipeline(const D3D12PipelineKey &key)
 {
-	for (const Pipeline &pipeline : Pipelines) {
-		if (pipeline.Key == key) {
-			return pipeline.State.Get();
-		}
+	const auto found = Pipelines.find(key);
+	if (found != Pipelines.end()) {
+		return found->second.Get();
 	}
 
 	// Input layout for the FVF. Missing elements read constants from input slot 1.
@@ -634,17 +660,15 @@ ID3D12PipelineState *D3D12RenderDevice::Get_Pipeline(const D3D12PipelineKey &key
 	desc.DSVFormat = key.HasDepth ? Native_Device.Depth_Format() : DXGI_FORMAT_UNKNOWN;
 	desc.SampleDesc.Count = 1;
 
-	Pipeline pipeline;
-	pipeline.Key = key;
-	const HRESULT hr = Native_Device.Device()->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&pipeline.State));
+	// A failed key is remembered as null so it does not retry (and log) every draw.
+	ComPtr<ID3D12PipelineState> &state = Pipelines[key];
+	const HRESULT hr = Native_Device.Device()->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&state));
 	if (FAILED(hr)) {
-		// Remember the failure so a broken key does not retry (and log) every draw.
 		WWRELEASE_WARNING(("D3D12: pipeline creation failed for FVF 0x%x: %s\n", unsigned(fvf), D3D12_Result_Name(hr)));
-		Pipelines.push_back(pipeline);
+		state.Reset();
 		return nullptr;
 	}
-	Pipelines.push_back(pipeline);
-	return Pipelines.back().State.Get();
+	return state.Get();
 }
 
 D3D12_GPU_DESCRIPTOR_HANDLE D3D12RenderDevice::Get_Sampler(unsigned stage)
@@ -696,9 +720,6 @@ void D3D12RenderDevice::Fill_Constants(void *data)
 	FFPConstantsCB &cb = *static_cast<FFPConstantsCB *>(data);
 	memset(&cb, 0, sizeof(cb));
 
-	const D3DMATRIX world_view = Multiply(World, View);
-	Copy_Matrix(cb.WorldView, world_view);
-	Copy_Matrix(cb.NormalMatrix, Normal_Matrix(world_view));
 	Copy_Matrix(cb.Projection, Projection);
 	for (unsigned stage = 0; stage < MAX_STAGES; ++stage) {
 		Copy_Matrix(cb.TexTransform[stage], TextureMatrices[stage]);
@@ -779,6 +800,34 @@ void D3D12RenderDevice::Fill_Constants(void *data)
 	}
 }
 
+D3D12PipelineKey D3D12RenderDevice::Current_Pipeline_Key() const
+{
+	const UINT target_width = RenderTarget ? RenderTarget->Width() : Native_Device.Width();
+	const UINT target_height = RenderTarget ? RenderTarget->Height() : Native_Device.Height();
+
+	D3D12PipelineKey key;
+	memset(&key, 0, sizeof(key));
+	key.FVF = FVF;
+	key.BlendEnable = RenderStates[D3DRS_ALPHABLENDENABLE] ? 1 : 0;
+	key.SrcBlend = key.BlendEnable ? uint8_t(RenderStates[D3DRS_SRCBLEND]) : uint8_t(D3DBLEND_ONE);
+	key.DstBlend = key.BlendEnable ? uint8_t(RenderStates[D3DRS_DESTBLEND]) : uint8_t(D3DBLEND_ZERO);
+	key.ColorWrite = uint8_t(RenderStates[D3DRS_COLORWRITEENABLE] & 0xf);
+	key.HasDepth = (DepthStencil != nullptr && target_width <= Native_Device.Width() && target_height <= Native_Device.Height()) ? 1 : 0;
+	key.DepthEnable = RenderStates[D3DRS_ZENABLE] ? 1 : 0;
+	key.DepthWrite = RenderStates[D3DRS_ZWRITEENABLE] ? 1 : 0;
+	key.DepthFunc = uint8_t(std::clamp<DWORD>(RenderStates[D3DRS_ZFUNC], D3DCMP_NEVER, D3DCMP_ALWAYS));
+	key.Cull = uint8_t(RenderStates[D3DRS_CULLMODE]);
+	key.Fill = uint8_t(RenderStates[D3DRS_FILLMODE]);
+	key.DepthBias = INT(std::lround(As_Float(RenderStates[D3DRS_DEPTHBIAS]) * 16777216.0f));
+	key.SlopeBias = As_Float(RenderStates[D3DRS_SLOPESCALEDEPTHBIAS]);
+	key.RTFormat = DXGI_FORMAT_B8G8R8A8_UNORM;
+	if (!key.HasDepth) {
+		key.DepthEnable = key.DepthWrite = 0;
+		key.DepthFunc = D3DCMP_ALWAYS;
+	}
+	return key;
+}
+
 bool D3D12RenderDevice::Bind_Geometry(INT &base_vertex, UINT min_index, UINT vertex_count, UINT &start_index, UINT index_count)
 {
 	ID3D12GraphicsCommandList *list = Native_Device.Command_List();
@@ -810,7 +859,10 @@ bool D3D12RenderDevice::Bind_Geometry(INT &base_vertex, UINT min_index, UINT ver
 	views[1].BufferLocation = DefaultVertexData->GetGPUVirtualAddress();
 	views[1].SizeInBytes = 256;
 	views[1].StrideInBytes = 0;
-	list->IASetVertexBuffers(0, 2, views);
+	if (!Bound.Geometry || memcmp(views, Bound.VertexViews, sizeof(views)) != 0) {
+		list->IASetVertexBuffers(0, 2, views);
+		memcpy(Bound.VertexViews, views, sizeof(views));
+	}
 
 	const D3D12Buffer &ib = Indices->Buffer;
 	const UINT index_size = (Indices->Format == D3DFMT_INDEX32) ? 4 : 2;
@@ -834,7 +886,11 @@ bool D3D12RenderDevice::Bind_Geometry(INT &base_vertex, UINT min_index, UINT ver
 		ib_view.BufferLocation = ib.GPU_Address();
 		ib_view.SizeInBytes = ib.Size();
 	}
-	list->IASetIndexBuffer(&ib_view);
+	if (!Bound.Geometry || memcmp(&ib_view, &Bound.IndexView, sizeof(ib_view)) != 0) {
+		list->IASetIndexBuffer(&ib_view);
+		Bound.IndexView = ib_view;
+	}
+	Bound.Geometry = true;
 	return true;
 }
 
@@ -885,68 +941,94 @@ HRESULT D3D12RenderDevice::Draw_Indexed(D3DPRIMITIVETYPE type, INT base_vertex, 
 		Bind_Targets();
 	}
 
-	const UINT target_width = RenderTarget ? RenderTarget->Width() : Native_Device.Width();
-	const UINT target_height = RenderTarget ? RenderTarget->Height() : Native_Device.Height();
-
-	D3D12PipelineKey key;
-	memset(&key, 0, sizeof(key));
-	key.FVF = FVF;
-	key.BlendEnable = RenderStates[D3DRS_ALPHABLENDENABLE] ? 1 : 0;
-	key.SrcBlend = key.BlendEnable ? uint8_t(RenderStates[D3DRS_SRCBLEND]) : uint8_t(D3DBLEND_ONE);
-	key.DstBlend = key.BlendEnable ? uint8_t(RenderStates[D3DRS_DESTBLEND]) : uint8_t(D3DBLEND_ZERO);
-	key.ColorWrite = uint8_t(RenderStates[D3DRS_COLORWRITEENABLE] & 0xf);
-	key.HasDepth = (DepthStencil != nullptr && target_width <= Native_Device.Width() && target_height <= Native_Device.Height()) ? 1 : 0;
-	key.DepthEnable = RenderStates[D3DRS_ZENABLE] ? 1 : 0;
-	key.DepthWrite = RenderStates[D3DRS_ZWRITEENABLE] ? 1 : 0;
-	key.DepthFunc = uint8_t(std::clamp<DWORD>(RenderStates[D3DRS_ZFUNC], D3DCMP_NEVER, D3DCMP_ALWAYS));
-	key.Cull = uint8_t(RenderStates[D3DRS_CULLMODE]);
-	key.Fill = uint8_t(RenderStates[D3DRS_FILLMODE]);
-	key.DepthBias = INT(std::lround(As_Float(RenderStates[D3DRS_DEPTHBIAS]) * 16777216.0f));
-	key.SlopeBias = As_Float(RenderStates[D3DRS_SLOPESCALEDEPTHBIAS]);
-	key.RTFormat = DXGI_FORMAT_B8G8R8A8_UNORM;
-	if (!key.HasDepth) {
-		key.DepthEnable = key.DepthWrite = 0;
-		key.DepthFunc = D3DCMP_ALWAYS;
+	if (PipelineDirty) {
+		CurrentPipeline = Get_Pipeline(Current_Pipeline_Key());
+		PipelineDirty = false;
 	}
-
-	ID3D12PipelineState *pso = Get_Pipeline(key);
-	if (pso == nullptr) {
+	if (CurrentPipeline == nullptr) {
 		return D3DERR_INVALIDCALL;
 	}
-
-	D3D12UploadRingClass::Allocation constants;
-	if (!Native_Device.Upload().Allocate(sizeof(FFPConstantsCB), D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, constants)) {
-		return E_OUTOFMEMORY;
-	}
-	Fill_Constants(constants.CPU);
 
 	if (!Bind_Geometry(base_vertex, min_index, vertex_count, start_index, index_count)) {
 		WWDEBUG_WARNING(("D3D12: draw skipped, buffer range out of bounds\n"));
 		return D3DERR_INVALIDCALL;
 	}
 
+	// Only state that changed since the last draw on this command list is recorded again.
 	ID3D12GraphicsCommandList *list = Native_Device.Command_List();
-	list->SetGraphicsRootSignature(RootSignature.Get());
-	list->SetPipelineState(pso);
-	list->SetGraphicsRootConstantBufferView(ROOT_CONSTANTS, constants.GPU);
-	list->SetGraphicsRootDescriptorTable(ROOT_TEXTURE0, srv[0]);
-	list->SetGraphicsRootDescriptorTable(ROOT_TEXTURE1, srv[1]);
-	list->SetGraphicsRootDescriptorTable(ROOT_SAMPLER0, Get_Sampler(0));
-	list->SetGraphicsRootDescriptorTable(ROOT_SAMPLER1, Get_Sampler(1));
-	list->IASetPrimitiveTopology(topology);
+	if (!Bound.RootSignature) {
+		list->SetGraphicsRootSignature(RootSignature.Get());
+		Bound.RootSignature = true;
+	}
+	if (Bound.Pipeline != CurrentPipeline) {
+		list->SetPipelineState(CurrentPipeline);
+		Bound.Pipeline = CurrentPipeline;
+		++Stats.PipelineBinds;
+	}
+
+	// Shared constants: rebuilt when a setter touched them, uploaded only if they really differ.
+	if (ConstantsDirty || Bound.Constants == 0) {
+		FFPConstantsCB cb;
+		Fill_Constants(&cb);
+		ConstantsDirty = false;
+		if (Bound.Constants == 0 || memcmp(&cb, SharedConstants.data(), sizeof(cb)) != 0) {
+			D3D12UploadRingClass::Allocation constants;
+			if (!Native_Device.Upload().Allocate(sizeof(cb), D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, constants)) {
+				return E_OUTOFMEMORY;
+			}
+			memcpy(constants.CPU, &cb, sizeof(cb));
+			memcpy(SharedConstants.data(), &cb, sizeof(cb));
+			list->SetGraphicsRootConstantBufferView(ROOT_CONSTANTS, constants.GPU);
+			Bound.Constants = constants.GPU;
+			++Stats.ConstantUploads;
+		}
+	}
+
+	// Per-object transforms travel as root constants.
+	if (DrawConstantsDirty || !Bound.DrawConstants) {
+		DrawConstantsCB draw;
+		const D3DMATRIX world_view = Multiply(World, View);
+		const D3DMATRIX normal = Normal_Matrix(world_view);
+		Copy_Matrix(draw.WorldView, world_view);
+		memcpy(draw.NormalMatrix, &normal, sizeof(draw.NormalMatrix));
+		list->SetGraphicsRoot32BitConstants(ROOT_DRAW, DRAW_CONSTANT_DWORDS, &draw, 0);
+		DrawConstantsDirty = false;
+		Bound.DrawConstants = true;
+	}
+
+	for (unsigned stage = 0; stage < MAX_STAGES; ++stage) {
+		if (Bound.Texture[stage] != srv[stage].ptr) {
+			list->SetGraphicsRootDescriptorTable(ROOT_TEXTURE0 + stage, srv[stage]);
+			Bound.Texture[stage] = srv[stage].ptr;
+		}
+		if (SamplerDirty[stage]) {
+			CurrentSampler[stage] = Get_Sampler(stage);
+			SamplerDirty[stage] = false;
+		}
+		if (Bound.Sampler[stage] != CurrentSampler[stage].ptr) {
+			list->SetGraphicsRootDescriptorTable(ROOT_SAMPLER0 + stage, CurrentSampler[stage]);
+			Bound.Sampler[stage] = CurrentSampler[stage].ptr;
+		}
+	}
+	if (Bound.Topology != topology) {
+		list->IASetPrimitiveTopology(topology);
+		Bound.Topology = topology;
+	}
 
 	// Direct3D 9 puts pixel centres on integer coordinates; Direct3D 10+ puts them at +0.5.
 	// Shifting the viewport by half a pixel reproduces D3D9 rasterisation exactly, which the
 	// engine's 2D code (Screen UV Bias) and texel-aligned UI rely on.
-	D3D12_VIEWPORT viewport = { float(Viewport.X) + 0.5f, float(Viewport.Y) + 0.5f, float(Viewport.Width), float(Viewport.Height), Viewport.MinZ, Viewport.MaxZ };
-	D3D12_RECT scissor = { LONG(Viewport.X), LONG(Viewport.Y), LONG(Viewport.X + Viewport.Width), LONG(Viewport.Y + Viewport.Height) };
-	list->RSSetViewports(1, &viewport);
-	list->RSSetScissorRects(1, &scissor);
+	if (!Bound.Viewport || memcmp(&Viewport, &Bound.ViewportState, sizeof(Viewport)) != 0) {
+		const D3D12_VIEWPORT viewport = { float(Viewport.X) + 0.5f, float(Viewport.Y) + 0.5f, float(Viewport.Width), float(Viewport.Height), Viewport.MinZ, Viewport.MaxZ };
+		const D3D12_RECT scissor = { LONG(Viewport.X), LONG(Viewport.Y), LONG(Viewport.X + Viewport.Width), LONG(Viewport.Y + Viewport.Height) };
+		list->RSSetViewports(1, &viewport);
+		list->RSSetScissorRects(1, &scissor);
+		Bound.ViewportState = Viewport;
+		Bound.Viewport = true;
+	}
 
 	list->DrawIndexedInstanced(index_count, 1, start_index, base_vertex, 0);
 	++Stats.Draws;
-	++Stats.PipelineBinds;
-	++Stats.ConstantUploads;
 	return D3D_OK;
 }
 
@@ -1402,12 +1484,17 @@ HRESULT D3D12RenderDevice::SetTransform(D3DTRANSFORMSTATETYPE state, const D3DMA
 	}
 	if (state == D3DTS_WORLD) {
 		World = *matrix;
+		DrawConstantsDirty = true;
 	} else if (state == D3DTS_VIEW) {
 		View = *matrix;
+		DrawConstantsDirty = true;
+		ConstantsDirty = true;		// lights are transformed into view space
 	} else if (state == D3DTS_PROJECTION) {
 		Projection = *matrix;
+		ConstantsDirty = true;
 	} else if (state >= D3DTS_TEXTURE0 && state <= D3DTS_TEXTURE7) {
 		TextureMatrices[state - D3DTS_TEXTURE0] = *matrix;
+		ConstantsDirty = true;
 	}
 	return D3D_OK;
 }
@@ -1437,6 +1524,7 @@ HRESULT D3D12RenderDevice::SetMaterial(const D3DMATERIAL9 *material)
 		return D3DERR_INVALIDCALL;
 	}
 	Material = *material;
+	ConstantsDirty = true;
 	return D3D_OK;
 }
 
@@ -1446,6 +1534,7 @@ HRESULT D3D12RenderDevice::SetLight(DWORD index, const D3DLIGHT9 *light)
 		return D3DERR_INVALIDCALL;
 	}
 	Lights[index] = *light;
+	ConstantsDirty = true;
 	return D3D_OK;
 }
 
@@ -1455,29 +1544,47 @@ HRESULT D3D12RenderDevice::LightEnable(DWORD index, BOOL enable)
 		return D3DERR_INVALIDCALL;
 	}
 	LightEnabled[index] = enable != FALSE;
+	ConstantsDirty = true;
 	return D3D_OK;
 }
 
 HRESULT D3D12RenderDevice::SetRenderState(D3DRENDERSTATETYPE state, DWORD value)
 {
-	if (unsigned(state) < 256) {
+	if (unsigned(state) < 256 && RenderStates[state] != value) {
 		RenderStates[state] = value;
+		// Render states feed both the pipeline key and the shader constants.
+		PipelineDirty = true;
+		ConstantsDirty = true;
 	}
 	return D3D_OK;
 }
 
 HRESULT D3D12RenderDevice::SetTextureStageState(DWORD stage, D3DTEXTURESTAGESTATETYPE state, DWORD value)
 {
-	if (stage < 8 && unsigned(state) < 33) {
+	if (stage < 8 && unsigned(state) < 33 && StageStates[stage][state] != value) {
 		StageStates[stage][state] = value;
+		ConstantsDirty = true;
 	}
 	return D3D_OK;
 }
 
 HRESULT D3D12RenderDevice::SetSamplerState(DWORD sampler, D3DSAMPLERSTATETYPE state, DWORD value)
 {
-	if (sampler < 8 && unsigned(state) < 14) {
+	if (sampler < 8 && unsigned(state) < 14 && SamplerStates[sampler][state] != value) {
 		SamplerStates[sampler][state] = value;
+		if (sampler < MAX_STAGES) {
+			SamplerDirty[sampler] = true;
+		}
+	}
+	return D3D_OK;
+}
+
+HRESULT D3D12RenderDevice::SetFVF(DWORD fvf)
+{
+	if (FVF != fvf) {
+		FVF = fvf;
+		PipelineDirty = true;
+		ConstantsDirty = true;
 	}
 	return D3D_OK;
 }

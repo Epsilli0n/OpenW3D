@@ -102,10 +102,16 @@ struct FFPLight
 	float4 Attenuation;  // x a0, y a1, z a2, w type
 };
 
-cbuffer FFPConstants : register(b0)
+// Changes with every object: passed as root constants.
+cbuffer DrawConstants : register(b0)
 {
 	row_major float4x4 WorldView;
-	row_major float4x4 NormalMatrix;     // inverse transpose of WorldView
+	row_major float3x4 NormalMatrix;     // inverse transpose of WorldView's 3x3 (w column unused)
+};
+
+// Material, lights and pipeline settings: uploaded only when they change.
+cbuffer FFPConstants : register(b1)
+{
 	row_major float4x4 Projection;
 	row_major float4x4 TexTransform[MAX_STAGES];
 
