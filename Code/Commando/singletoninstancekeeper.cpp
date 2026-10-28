@@ -48,7 +48,15 @@ static const char *	AUTOPLAY_GUID = "01AF9993-3492-11d3-8F6F-0060089C05B1";
 //////////////////////////////////////////////////////////////////////
 //	Static member initialization
 //////////////////////////////////////////////////////////////////////
+#ifdef FREEDEDICATEDSERVER
+//
+//	The dedicated server is a separate program. With the client's name a running server stopped the client
+// from starting (and the other way round).
+//
+const char *	SingletonInstanceKeeperClass::APP_GUID = "C6D925A3-7A9B-4ca3-866D-8B4D506C3665-FDS";
+#else
 const char *	SingletonInstanceKeeperClass::APP_GUID = "C6D925A3-7A9B-4ca3-866D-8B4D506C3665";
+#endif
 
 bool SingletonInstanceKeeperClass::AllowMultipleInstances = false;
 
