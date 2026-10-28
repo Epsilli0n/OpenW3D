@@ -41,11 +41,6 @@
 #include <WWOnline/RefPtr.h>
 #include <WWOnline/WaitCondition.h>
 
-namespace WWOnline
-{
-class Session;
-}
-
 class DlgWOLWait;
 
 class DlgWOLWaitEvent :
@@ -113,7 +108,6 @@ class DlgWOLWait :
 
 	private:
 		RefPtr<WaitCondition> mWait;
-		RefPtr<WWOnline::Session> mWOLSession;
 		unsigned mStartTime;
 		unsigned int mTimeout;
 		unsigned int mDialogTimeout;

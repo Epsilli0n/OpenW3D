@@ -57,10 +57,6 @@ endif(SYNTAX_CHECK_ONLY)
 cmake_dependent_option(W3D_BUILD_OPTION_SDL3 "Build OpenW3D with SDL3." OFF WIN32 ON)
 add_feature_info(SDL3Build W3D_BUILD_OPTION_SDL3 "Build OpenW3D with SDL3")
 
-# Do we want to build with webbrowser?
-cmake_dependent_option(W3D_BUILD_OPTION_WEBBROWSER "Build OpenW3D with webbrowser." ON WIN32 OFF)
-add_feature_info(BrowserBuild W3D_BUILD_OPTION_WEBBROWSER "Build OpenW3D with webbrowser")
-
 # Do we want to build with ffmpeg for audio/video decoding?
 # Non-Windows builds always use FFmpeg. 64-bit MSVC builds default to it as well, because
 # the only Miles and Bink binaries available are 32-bit and the stubs produce no sound or
@@ -120,8 +116,6 @@ elseif(WIN32)
 else()
     message(FATAL_ERROR "Invalid backend")
 endif()
-
-add_compile_definitions(WEBBROWSER_ENABLED=$<BOOL:${W3D_BUILD_OPTION_WEBBROWSER}>)
 
 if(W3D_BUILD_OPTION_OPENAL)
     include(openal)

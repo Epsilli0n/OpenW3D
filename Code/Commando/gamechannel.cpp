@@ -27,23 +27,16 @@
 #include "gamedata.h"
 #include "gamechannel.h"
 #include "wwdebug.h"
-#include <WWOnline/WOLChannel.h>
 
 //-----------------------------------------------------------------------------
-cGameChannel::cGameChannel(cGameData * p_game_data, const RefPtr<WWOnline::ChannelData>& channel)
+cGameChannel::cGameChannel(cGameData * p_game_data)
 {
 	WWASSERT(p_game_data != nullptr);
 	PGameData = p_game_data;
-	WolChannel = channel;
 }
 
 //-----------------------------------------------------------------------------
 cGameChannel::~cGameChannel(void)
 {
 	delete PGameData;
-}
-
-WOL::Channel* cGameChannel::Get_Wol_Channel(void)
-{
-	return &WolChannel->GetData();
 }

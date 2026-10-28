@@ -37,14 +37,11 @@
 #include "renegadedialog.h"
 #include "DlgMessageBox.h"
 #include "string_ids.h"
-#include <WWOnline/WOLSession.h>
 #include <wwui/mousemgr.h>
 #include <wwtranslatedb/translatedb.h>
 #include <wwdebug/wwdebug.h>
 #include "gamespyadmin.h"
 #include "systimer.h"
-
-using namespace WWOnline;
 
 DlgWOLWait* DlgWOLWait::mTheInstance = nullptr;
 
@@ -234,11 +231,6 @@ void DlgWOLWait::On_Init_Dialog(void)
 	{
 	if (mWait.IsValid())
 		{
-		if (!cGameSpyAdmin::Is_Gamespy_Game()) {
-			mWOLSession = Session::GetInstance(false);
-			WWASSERT(mWOLSession.IsValid());
-		}
-
 		// Start the wait condition
 		mWait->WaitBeginning();
 
@@ -329,8 +321,8 @@ void DlgWOLWait::On_Periodic(void)
 
 void DlgWOLWait::CheckCondition(void)
 	{
-	// Quit if there is nothing to wait on or there is not WWOnline session.
-	if (!mWait.IsValid() || (!mWOLSession.IsValid() && !cGameSpyAdmin::Is_Gamespy_Game()))
+	// Quit if there is nothing to wait on.
+	if (!mWait.IsValid())
 		{
 		End_Dialog();
 		return;
@@ -398,9 +390,6 @@ void DlgWOLWait::CheckCondition(void)
 		mShowDialog = true;
 		MouseMgrClass::End_Wait_Cursor();
 		}
-
-	// Allow time for WWOnline processing.
-	if (mWOLSession.IsValid()) mWOLSession->Process();
 	}
 
 

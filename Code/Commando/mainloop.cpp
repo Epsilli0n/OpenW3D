@@ -57,7 +57,6 @@
 #include "ccamera.h"
 #include "pathmgr.h"
 #include "networkobjectmgr.h"
-#include "WebBrowser.h"
 #include "AutoStart.h"
 #include "gameinitmgr.h"
 #include "servercontrol.h"
@@ -131,14 +130,7 @@ void _Game_Main_Loop_Loop(void)
 		cNetwork::Update();
 	}
 
-	// Denzil - Embedded browser
-#if WEBBROWSER_ENABLED
-	if (WebBrowser::IsWebPageDisplayed() == false) {
-#else
-    {
-#endif
-		GameModeManager::Render();
-	}
+	GameModeManager::Render();
 
 	if (AutoRestart.Is_Active()) {
 		AutoRestart.Think();

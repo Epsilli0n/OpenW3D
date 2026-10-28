@@ -59,7 +59,6 @@
 #include "directinput.h"
 #include "input.h"
 #include "dlgmainmenu.h"
-#include "DlgWebPage.h"
 #include "dlgsavegame.h"
 #include "dlgcontrols.h"
 #include "dlghelpscreen.h"
@@ -364,22 +363,6 @@ Default_On_Command (DialogBaseClass *dialog, int ctrl_id, int /* mesage_id */, u
 			dialog->End_Dialog ();
 			break ;
 		}
-
-		case IDC_MP_SHORTCUT_NEWS:
-			DlgWebPage::DoDialog("News");
-			break;
-
-		case IDC_MP_SHORTCUT_CLANS:
-			DlgWebPage::DoDialog("BattleClans");
-			break;
-
-		case IDC_MP_SHORTCUT_RANKINGS:
-			DlgWebPage::DoDialog("Ladder");
-			break;
-
-		case IDC_MP_SHORTCUT_NET_STATUS:
-			DlgWebPage::DoDialog("NetStatus");
-			break;
 
 		case IDC_MP_SHORTCUT_INTERNET_OPTIONS:
 			START_DIALOG (MultiplayOptionsMenuClass);

@@ -39,8 +39,6 @@
 #include "registry.h"
 #include "bittype.h"
 #include "_globals.h"
-#include "WWOnline/WOLSession.h"
-#include <WWOnline/WOLLangCodes.h>
 #include "time.h"
 
 
@@ -122,9 +120,10 @@ MPSettingsMgrClass::Load_Settings (void)
 			unsigned int sku = skuReg.Get_Int("SKU", RENEGADE_BASE_SKU);
 			unsigned int lang = (sku & 0xFF);
 
-			// If this is not an Asian language region then use the Western defaults
-			if ((WWOnline::LANGCODE_JAPANESE != lang) && (WWOnline::LANGCODE_KOREAN != lang)
-					&& (WWOnline::LANGCODE_CHINESE != lang)) {
+			// If this is not an Asian language region then use the Western defaults.
+			// SKU language codes: 6 Japanese, 9 Korean, 10 Chinese.
+			enum { SKU_LANG_JAPANESE = 6, SKU_LANG_KOREAN = 9, SKU_LANG_CHINESE = 10 };
+			if ((SKU_LANG_JAPANESE != lang) && (SKU_LANG_KOREAN != lang) && (SKU_LANG_CHINESE != lang)) {
 
 				defaultOptions = OPTION_DEFAULTS_LATIN;
 			}
@@ -368,65 +367,17 @@ MPSettingsMgrClass::Are_Alternate_Skins_Unlocked (void)
 	if (AreSkinsUnlocked == false) {
 
 		//
-		//	Do we have a valid WOL session to query?
+		//	The alternate skins unlocked for everybody on 15 March 2002. Westwood Online could unlock them
+		// earlier for insiders; now only the date check is left.
 		//
-		RefPtr<WWOnline::Session> wol_session = WWOnline::Session::GetInstance ();
-		if (wol_session.IsValid ()) {
+		struct tm expiration_time_struct = { 0 };
+		expiration_time_struct.tm_year	= 102;
+		expiration_time_struct.tm_mon		= 2;
+		expiration_time_struct.tm_mday	= 15;
+		time_t expire_time = ::mktime (&expiration_time_struct);
 
-			//
-			//	First check the insider status of the current user.  If that faild, then
-			// check the server time to see if its past the waiting period.
-			//
-			AreSkinsUnlocked = wol_session->IsCurrUserInsider ();
-			if (AreSkinsUnlocked == false) {
-
-				//
-				//	First, build a time structure representing when the skins are unlocked for everybody
-				//
-				struct tm expiration_time_struct = { 0 };
-				expiration_time_struct.tm_year	= 102;
-				expiration_time_struct.tm_mon		= 2;
-				expiration_time_struct.tm_mday	= 15;
-				time_t expire_time = ::mktime (&expiration_time_struct);
-
-				//
-				//	Now, do a simple check to see if time has expired
-				//
-				AreSkinsUnlocked = (wol_session->GetServerTime () >= expire_time);
-			}
-
-			//
-			//	If we've found out from WOL that the skins are unlocked, then cache
-			// this information in the registry.
-			//
-			if (AreSkinsUnlocked) {
-
-				//
-				//	Save this setting in the registry
-				//
-				RegistryClass registry (APPLICATION_SUB_KEY_NAME_WOLSETTINGS);
-				if (registry.Is_Valid ()) {
-					registry.Set_Bool (REG_VALUE_ARE_SKINS_UNLOCKED, AreSkinsUnlocked);
-				}
-			}
-
-		} else {
-
-			//
-			//	First, build a time structure representing when the skins are unlocked for everybody
-			//
-			struct tm expiration_time_struct = { 0 };
-			expiration_time_struct.tm_year	= 102;
-			expiration_time_struct.tm_mon		= 2;
-			expiration_time_struct.tm_mday	= 15;
-			time_t expire_time = ::mktime (&expiration_time_struct);
-
-			//
-			//	Now, simply check to see if time has expired
-			//
-			time_t curr_time;
-			AreSkinsUnlocked = (::time (&curr_time) >= expire_time);
-		}
+		time_t curr_time;
+		AreSkinsUnlocked = (::time (&curr_time) >= expire_time);
 	}
 
 	return AreSkinsUnlocked;

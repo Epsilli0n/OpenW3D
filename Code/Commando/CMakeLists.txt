@@ -59,8 +59,6 @@ set(COMMANDO_SRC
     scorescreen.h
     textdisplay.cpp
     textdisplay.h
-    wolgmode.cpp
-    wolgmode.h
     _globals.h
     AutoStart.cpp
     AutoStart.h
@@ -87,30 +85,8 @@ set(COMMANDO_SRC
     winmain_compat.h
     bandwidthcheck.cpp
     bandwidthcheck.h
-    FirewallWait.cpp
-    FirewallWait.h
-    GameResSend.cpp
-    GameResSend.h
     mpsettingsmgr.cpp
     mpsettingsmgr.h
-    WOLBuddyMgr.cpp
-    WOLBuddyMgr.h
-    WOLChatMgr.cpp
-    WOLChatMgr.h
-    WOLDiags.cpp
-    WOLDiags.h
-    WOLGameInfo.cpp
-    WOLGameInfo.h
-    WOLJoinGame.cpp
-    WOLJoinGame.h
-    wollocalemgr.cpp
-    wollocalemgr.h
-    WOLLoginProfile.cpp
-    WOLLoginProfile.h
-    WOLLogonMgr.cpp
-    WOLLogonMgr.h
-    WOLQuickMatch.cpp
-    WOLQuickMatch.h
     chatshre.cpp
     chatshre.h
     gamechanlist.cpp
@@ -148,10 +124,6 @@ set(COMMANDO_SRC
     messages.cpp
     multihud.cpp
     multihud.h
-    NAT.cpp
-    nataddr.cpp
-    natsock.cpp
-    natter.cpp
     netgraphs.cpp
     nicenum.cpp
     nicenum.h
@@ -212,8 +184,6 @@ set(COMMANDO_SRC
     dlgcontroltabs.h
     dlgcredits.cpp
     dlgcredits.h
-    DlgDownload.cpp
-    DlgDownload.h
     dlgevabuildingstab.cpp
     dlgevabuildingstab.h
     dlgevacharacterstab.cpp
@@ -259,50 +229,12 @@ set(COMMANDO_SRC
     dlgmpslaveservers.cpp
     DlgMPTeamSelect.cpp
     DlgMPTeamSelect.h
-    dlgmpwoladdbuddy.cpp
-    dlgmpwoladdbuddy.h
-    dlgmpwoladdignoreentry.cpp
-    dlgmpwoladdignoreentry.h
-    dlgmpwolautologinprompt.cpp
-    dlgmpwolautologinprompt.h
-    dlgmpwolbuddies.cpp
-    dlgmpwolbuddies.h
-    dlgmpwolbuddylistpopup.cpp
-    dlgmpwolbuddylistpopup.h
-    dlgmpwolchat.cpp
-    dlgmpwolchat.h
-    dlgmpwoldeletebuddy.cpp
-    dlgmpwoldeletebuddy.h
-    dlgmpwoldeleteignoreentry.cpp
-    dlgmpwoldeleteignoreentry.h
-    dlgmpwolgamelist.cpp
-    dlgmpwolgamelist.h
-    dlgmpwolgoodies.cpp
-    dlgmpwolgoodies.h
-    dlgmpwolignorelist.cpp
-    dlgmpwolignorelist.h
-    dlgmpwolinvitation.cpp
-    dlgmpwolinvitation.h
-    dlgmpwollocalenag.cpp
-    dlgmpwollocalenag.h
-    dlgmpwolmain.cpp
-    dlgmpwolmain.h
-    dlgmpwolmotd.cpp
-    dlgmpwolmotd.h
-    dlgmpwolpagebuddy.cpp
-    dlgmpwolpagebuddy.h
-    dlgmpwolpagereply.cpp
-    dlgmpwolpagereply.h
-    dlgmpwolquickmatchoptions.cpp
-    dlgmpwolquickmatchoptions.h
     dlgmultiplayoptions.cpp
     dlgmultiplayoptions.h
     DlgPasswordPrompt.cpp
     DlgPasswordPrompt.h
     dlgpreviewoptions.cpp
     dlgpreviewoptions.h
-    DlgQuickmatch.cpp
-    DlgQuickmatch.h
     DlgRestart.cpp
     DlgRestart.h
     dlgsavegame.cpp
@@ -313,14 +245,8 @@ set(COMMANDO_SRC
     dlgsidebarhelp.h
     dlgtechoptions.cpp
     dlgtechoptions.h
-    DlgWebPage.cpp
-    DlgWebPage.h
     DlgWOLAutoStart.cpp
     DlgWOLAutoStart.h
-    DlgWOLLogon.cpp
-    DlgWOLLogon.h
-    DlgWOLSettings.cpp
-    DlgWOLSettings.h
     DlgWOLWait.cpp
     DlgWOLWait.h
     mainmenutransition.cpp
@@ -334,8 +260,6 @@ set(COMMANDO_SRC
     skinpackage.h
     skinpackagemgr.cpp
     skinpackagemgr.h
-    WebBrowser.cpp
-    WebBrowser.h
     AnnounceEvent.cpp
     AnnounceEvent.h
     bioevent.cpp
@@ -466,8 +390,6 @@ endif()
 if(WIN32)
     list(APPEND COMMANDO_SRC
         chat.rc
-        ../WOLBrowser/WOLBrowser_i.c
-        ../wolapi/WOLAPI_i.c
     )
 endif()
 

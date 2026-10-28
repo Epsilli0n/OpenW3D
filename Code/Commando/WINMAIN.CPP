@@ -75,7 +75,6 @@
 #include "Except.h"
 
 #include "directinput.h"
-#include "WebBrowser.h"
 #include "wwmemlog.h"
 
 #include "datasafe.h"
@@ -220,12 +219,6 @@ int main(int argc, char *argv[])
 		cUserOptions::Print_Command_Line_Help(false);
 		return 0;
 	}
-
-#if WEBBROWSER_ENABLED
-#ifdef _DEBUG // Denzil - DO NOT COMPILE INTO FINAL BUILD
-	WebBrowser::InstallPrerequisites();
-#endif // WWDEBUG
-#endif // WEBBROWSER_ENABLED
 
 	//
 	//	Verify that we can execute (i.e. make sure there are no other instances running)
@@ -741,13 +734,7 @@ void On_Focus_Loss(void)
  *=============================================================================================*/
 void On_Focus_Restore(void)
 {
-#if WEBBROWSER_ENABLED
-	if (WebBrowser::IsWebPageDisplayed() == false) {
-#else
-    {
-#endif
-		DirectInput::Acquire();
-	}
+	DirectInput::Acquire();
 
 	GameModeManager::Hide_Render_Frames(1);	// Hide the first rendered frame
 }

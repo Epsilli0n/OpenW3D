@@ -36,18 +36,10 @@
 #include <WWOnline/RefPtr.h>
 #include "refcount.h"
 
-namespace WWOnline
-{
-class ChannelData;
-}
-
-namespace WOL
-{
-struct Channel;
-}
-
 class cGameData;
 
+//-----------------------------------------------------------------------------
+// A game found on the LAN, as announced by cLanChat.
 //-----------------------------------------------------------------------------
 class cGameChannel : public RefCountClass
 {
@@ -55,15 +47,12 @@ class cGameChannel : public RefCountClass
 
 	public:
 		cGameData* Get_Game_Data(void) {WWASSERT(PGameData != nullptr); return PGameData;}
-		RefPtr<WWOnline::ChannelData>& Get_Channel(void) {return WolChannel;}
-		WOL::Channel* Get_Wol_Channel(void);
 
 	private:
-		cGameChannel(cGameData * p_game_data, const RefPtr<WWOnline::ChannelData>& channel);
+		cGameChannel(cGameData * p_game_data);
 		~cGameChannel(void);
 
 		cGameData* PGameData;
-		RefPtr<WWOnline::ChannelData> WolChannel;
 };
 
 #endif // GAMECHANNEL_H

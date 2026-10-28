@@ -42,8 +42,6 @@
 #include "msgstatlist.h"
 #include "wwprofile.h"
 #ifdef _WIN32
-#include "Commando/nat.h"
-#include "Commando/natter.h"
 #endif
 #include "packetmgr.h"
 #include "BWBalance.h"
@@ -373,11 +371,6 @@ void cConnection::Init_As_Server(uint16_t server_port, int max_players,
       } while (!is_bound && num_tries < 50 && server_port <= MAX_SERVER_PORT);
 
       WWASSERT(num_tries < 50 && server_port <= MAX_SERVER_PORT);
-
-		// Tell the firewall code that we started a new local server.
-#ifdef _WIN32
-		WOLNATInterface.Set_Server(true);
-#endif
    }
 
 	InitDone = true;
@@ -716,17 +709,14 @@ bool cConnection::Receive_Packet()
 #endif //WWDEBUG
 	}
 
-#ifdef _WIN32
 	//
-	// Intercept packets intended for the firewall negotiation code.
+	// Firewall probes belonged to Westwood Online's NAT negotiation, which is gone. Drop them so they never
+	// reach the game protocol.
 	//
-   if (packet.Get_Type() == PACKETTYPE_FIREWALL_PROBE) {
-		WOLNATInterface.Intercept_Game_Packet(packet);
+	if (packet.Get_Type() == PACKETTYPE_FIREWALL_PROBE) {
 		packet.Flush();
-      WWDEBUG_SAY(("cConnection:: Packet transferred to WOLNAT interface\n"));
 		return(true);
-	};
-#endif
+	}
 
 
 	//

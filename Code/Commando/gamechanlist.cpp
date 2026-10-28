@@ -28,20 +28,19 @@
 #include "gamechannel.h"
 #include "gamechanlist.h"
 #include "wwdebug.h"
-#include <WWOnline/WOLChannel.h>
 //
 // Class statics
 //
 SList<cGameChannel> cGameChannelList::ChanList;
 
 //-----------------------------------------------------------------------------
-void cGameChannelList::Add_Channel(cGameData * p_game_data, const RefPtr<WWOnline::ChannelData>& p_channel)
+void cGameChannelList::Add_Channel(cGameData * p_game_data)
 {
 	WWASSERT(p_game_data != nullptr);
 
    cGameChannel * p_game_channel = Find_Channel(p_game_data->Get_Owner());
 	if (p_game_channel == nullptr) {
-		p_game_channel = new cGameChannel(p_game_data, p_channel);
+		p_game_channel = new cGameChannel(p_game_data);
 		WWASSERT(p_game_channel != nullptr);
 		ChanList.Add_Tail(p_game_channel);
    } else {
@@ -53,8 +52,6 @@ void cGameChannelList::Add_Channel(cGameData * p_game_data, const RefPtr<WWOnlin
 
 		p_game_channel->Get_Game_Data()->Set_Map_Name(
 			p_game_data->Get_Map_Name());
-
-		p_game_channel->WolChannel = p_channel;
 
 		delete p_game_data;
 	}
