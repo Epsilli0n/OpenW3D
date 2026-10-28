@@ -57,6 +57,8 @@ IDL_*.loc
 /CMakeUserPresets.json
 /.cache
 
+# Local reference copies of third-party sources (TT, Dragonade)
+/docs/extras/
 # AI agent / assistant artifacts
 /.kiro/
 /.kiro-tmp/
