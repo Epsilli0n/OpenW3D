@@ -187,13 +187,19 @@ bool ServerSettingsClass::Parse(bool apply)
 		/*
 		** Game Type.
 		*/
-		ini.Get_String(MasterServerSection, "GameType", "WOL", game_type, sizeof(game_type));
+		ini.Get_String(MasterServerSection, "GameType", "LAN", game_type, sizeof(game_type));
 		if (cGameSpyAdmin::Get_Is_Server_Gamespy_Listed()) {
 			strcpy(game_type, "GameSpy");
 		}
 		if (stricmp(game_type, "WOL") == 0) {
-			GameMode = MODE_WOL;
-		} else if (stricmp(game_type, "LAN") == 0) {
+			/*
+			** Westwood Online is gone. Stock server.ini files still ask for it, so host on the LAN instead of
+			** sitting idle without a game port.
+			*/
+			ConsoleBox.Print("Warning - Westwood Online is no longer available. Hosting with GameType = LAN instead\n");
+			strcpy(game_type, "LAN");
+		}
+		if (stricmp(game_type, "LAN") == 0) {
 			wol = false;
 			GameMode = MODE_LAN;
 		} else if (stricmp(game_type, "GameSpy") == 0) {
@@ -203,7 +209,7 @@ bool ServerSettingsClass::Parse(bool apply)
 			GameMode = MODE_GAMESPY;
 		} else {
 			WWDEBUG_SAY(("Bad game type specified in server.ini\n"));
-			ConsoleBox.Print("Error - Unknown game type in server settings. Use 'LAN', 'WOL', or 'GameSpy' - aborting\n");
+			ConsoleBox.Print("Error - Unknown game type in server settings. Use 'LAN' or 'GameSpy' - aborting\n");
 			ConsoleBox.Wait_For_Keypress();;
 			return(false);
 		}
