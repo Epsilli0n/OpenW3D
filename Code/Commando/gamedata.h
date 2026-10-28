@@ -67,7 +67,6 @@ class Font3DInstanceClass;
 class cGameDataSinglePlayer;
 class cGameDataSkirmish;
 class cGameDataCnc;
-class WOLGameInfo;
 
 //
 // This class describes a server configuration. Dynamic instantiations
@@ -221,7 +220,6 @@ class	cGameData :
 		virtual bool	Is_Valid_Settings(WideStringClass& outMsg, bool check_as_server = false);
 		virtual void	Export_Tier_1_Data(cPacket & packet);
 		virtual void	Import_Tier_1_Data(cPacket & packet);
-		virtual void	Import_Tier_1_Data(const WOLGameInfo& gameInfo);
 		virtual void	Export_Tier_2_Data(cPacket & packet);
 		virtual void	Import_Tier_2_Data(cPacket & packet);
 

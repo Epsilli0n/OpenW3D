@@ -75,22 +75,18 @@ public:
 	//	Interface type init
 	//
 	//		LAN	= Local Area Network
-	//		WOL	= Westwood Online
 	//		SP		= Single Player
 	//
 	static void		Initialize_LAN (void);
-	static void		Initialize_WOL (void);
 	static void		Initialize_SP (void);
 	static void		Initialize_Skirmish (void);
 
 	static bool		Is_LAN_Initialized (void)			{ return Mode == MODE_LAN; }
-	static bool		Is_WOL_Initialized (void)			{ return Mode == MODE_WOL; }
 	static bool		Is_SP_Initialized (void)			{ return Mode == MODE_SP; }
 	static bool		Is_Skirmish_Initialized (void)	{ return Mode == MODE_SKIRMISH; }
 
 	static void		Shutdown (void);
 	static void		Shutdown_LAN (void);
-	static void		Shutdown_WOL (void);
 	static void		Shutdown_SP (void);
 	static void		Shutdown_Skirmish (void);
 
@@ -103,11 +99,6 @@ public:
 	static void		Set_Needs_Game_Exit			(bool onoff)	{ NeedsGameExit = onoff; }
 	static void		Set_Needs_Game_Exit_All		(bool onoff)	{ NeedsGameExitAll = onoff; }
 
-	//
-	//	WOL specific
-	//
-	static void		Set_WOL_Return_Dialog (RenegadeDialogMgrClass::LOCATION location)	{ WOLReturnDialog = location; }
-
 private:
 
 	////////////////////////////////////////////////////////////////
@@ -118,8 +109,7 @@ private:
 		MODE_UNKNOWN	= 0,
 		MODE_SP,
 		MODE_SKIRMISH,
-		MODE_LAN,
-		MODE_WOL
+		MODE_LAN
 	};
 
 	////////////////////////////////////////////////////////////////
@@ -136,7 +126,6 @@ private:
 	static bool		RestoreSFX;
 	static bool		RestoreMusic;
 	static int		Mode;
-	static int		WOLReturnDialog;
 
 	static bool		NeedsGameExit;
 	static bool		NeedsGameExitAll;

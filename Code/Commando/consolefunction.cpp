@@ -132,7 +132,6 @@
 #include "clientbboevent.h"
 #include "wheelvehicle.h"
 #include "trackedvehicle.h"
-#include "WOLDiags.h"
 #include "packetmgr.h"
 #include "requestkillevent.h"
 #include "csconsolecommandevent.h"
@@ -160,8 +159,6 @@
 #include "lightsolve.h"
 #include "lightsolvecontext.h"
 #include "debugbreak.h"
-#include "wolgmode.h"
-#include <WWOnline/WOLSession.h>
 
 
 
@@ -248,18 +245,6 @@ public:
 	virtual	void Activate( const char * /* input */ ) override {
 		HUDClass::Enable( !HUDClass::Is_Enabled() );
       Print( "HUD toggled\n" );
-	}
-};
-
-
-class PatsDebugConsoleFunctionClass : public ConsoleFunctionClass {
-public:
-	virtual	const char * Get_Name( void ) override	{ return "pat"; }
-	virtual	const char * Get_Help( void ) override	{ return "PAT - Pat's generic debug console function."; }
-	virtual	void Activate( const char * /* input */ ) override
-	{
-		RenegadeDialogMgrClass::Goto_Location (RenegadeDialogMgrClass::LOC_INTERNET_MAIN);
-		return ;
 	}
 };
 
@@ -2484,8 +2469,6 @@ public:
       strcat(buffer, "     soldier_data            (sd)\n");
       strcat(buffer, "     spawner_data            (spawn)\n");
       strcat(buffer, "     vehicle_data            (vd)\n");
-      strcat(buffer, "     wol							(wol)\n");
-      strcat(buffer, "     wol_location            (wl)\n");
 
       strcat(buffer, "     PacketsSentServer						(pss)\n");
       strcat(buffer, "     PacketsSentClient						(psc)\n");
@@ -2675,9 +2658,6 @@ public:
 		} else if (cMiscUtil::Is_String_Same(input, "powerup_data") ||
 			cMiscUtil::Is_String_Same(input, "pd")) {
 			cDevOptions::ShowPowerupData.Toggle();
-		} else if (cMiscUtil::Is_String_Same(input, "wol_location") ||
-			cMiscUtil::Is_String_Same(input, "wl")) {
-			cDevOptions::ShowWolLocation.Toggle();
 		} else if (cMiscUtil::Is_String_Same(input, "0")) {
 			//
 			// Turn off any watch objects
@@ -3570,7 +3550,7 @@ class StatsConsoleFunctionClass : public ConsoleFunctionClass
 {
 public:
 	virtual	const char * Get_Name( void ) override	{ return "stats"; }
-	virtual	const char * Get_Help( void ) override	{ return "STATS <off|fps|dx8|star|sr_history|sr|gerd|collision|culling|physics|vehicle|ai|wol|profile|memory> - changes stats display."; }
+	virtual	const char * Get_Help( void ) override	{ return "STATS <off|fps|dx8|star|sr_history|sr|gerd|collision|culling|physics|vehicle|ai|profile|memory> - changes stats display."; }
 	virtual	void Activate( const char * input ) override {
 		StatisticsDisplayManager::Set_Display( input );
 	}
@@ -3899,20 +3879,14 @@ public:
 
 				GameModeClass* game = GameModeManager::Find("Combat");
 				if (game && game->Is_Active()) {
-					game = GameModeManager::Find("WOL");
+					game = GameModeManager::Find("LAN");
 					if (game && game->Is_Active()) {
-						ConsoleBox.Print("Westwood Online mode active since %s\n", upstring);
-						active = true;
-					} else {
-						game = GameModeManager::Find("LAN");
-						if (game && game->Is_Active()) {
-							if (cGameSpyAdmin::Get_Is_Server_Gamespy_Listed()) {
-								ConsoleBox.Print("GameSpy mode active since %s\n", upstring);
-							} else {
-								ConsoleBox.Print("LAN mode active since %s\n", upstring);
-							}
-							active = true;
+						if (cGameSpyAdmin::Get_Is_Server_Gamespy_Listed()) {
+							ConsoleBox.Print("GameSpy mode active since %s\n", upstring);
+						} else {
+							ConsoleBox.Print("LAN mode active since %s\n", upstring);
 						}
+						active = true;
 					}
 				}
 
@@ -4047,32 +4021,6 @@ class KickConsoleFunctionClass : public ConsoleFunctionClass {
 public:
 	virtual	const char * Get_Name( void ) override	{ return "kick"; }
 	virtual	const char * Get_Help( void ) override	{ return "KICK [<Nickname>|<Id>] - Kick a user from the game."; }
-	bool KickWOLUser(const WideStringClass & user_name) {
-
-		GameModeClass* game = GameModeManager::Find("WOL");
-
-		if (game && game->Is_Active()) {
-
-			if (user_name.Get_Length() > 0) {
-				WolGameModeClass* wolgame = reinterpret_cast<WolGameModeClass*>(game);
-
-				if (wolgame->Kick_Player(user_name)) {
-					StringClass smallstring(true);
-					user_name.Convert_To(smallstring);
-					ConsoleBox.Print("%s was kicked\n", smallstring.Peek_Buffer());
-					return true;
-				}
-			}
-		}
-		return false;
-	}
-	bool KickWOLUser(int id) {
-		cPlayer *player = cPlayerManager::Find_Player(id);
-		if (player) {
-			return KickWOLUser(player->Get_Name());
-		}
-		return false;
-	}
 	bool KickGameSpyUser(int id) {
 		if (cGameSpyAdmin::Is_Gamespy_Game()) {
 			return GameSpyBanList.Kick_Player(id);
@@ -4107,8 +4055,7 @@ public:
 			bool kicked = false;
 			WideStringClass user_name(input, true);
 
-			kicked = KickWOLUser(user_name);
-			if (!kicked) kicked = KickGameSpyUser(user_name);
+			kicked = KickGameSpyUser(user_name);
 
 			if (!kicked) {
 				// try to kick by Id number
@@ -4121,8 +4068,7 @@ public:
 					else t++;
 				}
 				if (t) {
-					kicked = KickWOLUser(atoi(input));
-					if (!kicked) kicked = KickGameSpyUser(atoi(input));
+					kicked = KickGameSpyUser(atoi(input));
 				}
 			}
 
@@ -4136,16 +4082,10 @@ public:
 class BanConsoleFunctionClass : public ConsoleFunctionClass {
 public:
 	virtual	const char * Get_Name( void ) override	{ return "ban"; }
-	virtual	const char * Get_Help( void ) override	{ return "BAN [<Nickname>|<Id>] - Permanently ban a user from this server(GameSpy & WOL mode only)."; }
+	virtual	const char * Get_Help( void ) override	{ return "BAN [<Nickname>|<Id>] - Permanently ban a user from this server(GameSpy mode only)."; }
 	virtual	void Activate( const char * input ) override {
 
-		GameModeClass* wolgame = GameModeManager::Find("WOL");
-		bool is_wol = false;
-		if (wolgame && wolgame->Is_Active()) {
-			is_wol = true;
-		}
-		//if (cGameSpyAdmin::Is_Gamespy_Game() && cNetwork::I_Am_Server()) {
-		if ((cGameSpyAdmin::Is_Gamespy_Game() || is_wol) && cNetwork::I_Am_Server()) {
+		if (cGameSpyAdmin::Is_Gamespy_Game() && cNetwork::I_Am_Server()) {
 
 			if (!input || !(*input)) return;
 			cPlayer *player = nullptr;
@@ -4161,14 +4101,10 @@ public:
 					continue;
 				}
 				if (stricmp(StringClass(input), StringClass(player->Get_Name())) == 0) {
-					if (is_wol) {
-						((WolGameModeClass*)wolgame)->Ban_Player(player->Get_Name(), player->Get_Ip_Address());
+					if (player->Get_GameSpy_Hash_Id().Is_Empty()) {
+						GameSpyBanList.Ban_User(input);
 					} else {
-						if (player->Get_GameSpy_Hash_Id().Is_Empty()) {
-							GameSpyBanList.Ban_User(input);
-						} else {
-							GameSpyBanList.Ban_User(input, player->Get_GameSpy_Hash_Id());
-						}
+						GameSpyBanList.Ban_User(input, player->Get_GameSpy_Hash_Id());
 					}
 					break;
 				}
@@ -4185,85 +4121,14 @@ public:
 				if (t) {
 					player = cPlayerManager::Find_Player(atoi(input));
 					if (player) {
-						if (is_wol) {
-							((WolGameModeClass*)wolgame)->Ban_Player(player->Get_Name(), player->Get_Ip_Address());
-						} else {
-							if (player->Get_GameSpy_Hash_Id().Is_Empty() && !player->Get_Name().Is_Empty()) {
-								GameSpyBanList.Ban_User(StringClass(player->Get_Name()));
-							} else if (!player->Get_GameSpy_Hash_Id().Is_Empty()) {
-								GameSpyBanList.Ban_User(StringClass(player->Get_Name()), player->Get_GameSpy_Hash_Id());
-							}
+						if (player->Get_GameSpy_Hash_Id().Is_Empty() && !player->Get_Name().Is_Empty()) {
+							GameSpyBanList.Ban_User(StringClass(player->Get_Name()));
+						} else if (!player->Get_GameSpy_Hash_Id().Is_Empty()) {
+							GameSpyBanList.Ban_User(StringClass(player->Get_Name()), player->Get_GameSpy_Hash_Id());
 						}
 					}
 				} else {
 					ConsoleBox.Print("%s not found\n", input);
-				}
-			}
-		}
-	}
-};
-
-
-class AllowConsoleFunctionClass : public ConsoleFunctionClass {
-public:
-	virtual	const char * Get_Name( void ) override	{ return "allow"; }
-	virtual	const char * Get_Help( void ) override	{ return "ALLOW [<Nickname>|<Id>] - Remove user channel ban from this server (WOL mode only)."; }
-	virtual	void Activate( const char * input ) override {
-
-		GameModeClass* game = GameModeManager::Find("WOL");
-
-		if (!input || !(*input)) return;
-
-		if (game && game->Is_Active()) {
-
-			WideStringClass wname(input, true);
-
-			if (wname.Get_Length() > 0 && wname.Get_Length() <15) {
-				RefPtr<WWOnline::Session> wol_session = WWOnline::Session::GetInstance(false);
-				if (wol_session.IsValid()) {
-					wol_session->BanUser(wname, false);
-				}
-			}
-		}
-	}
-};
-
-
-class PageConsoleFunctionClass : public ConsoleFunctionClass {
-public:
-	virtual	const char * Get_Name( void ) override	{ return "page"; }
-	virtual	const char * Get_Help( void ) override	{ return "PAGE Nickname Message - Page a Westwood Online user."; }
-	virtual	void Activate( const char * input ) override {
-
-		static unsigned int last_page = 0;
-
-		GameModeClass* wolgame = GameModeManager::Find("WOL");
-		bool is_wol = false;
-		if (wolgame && wolgame->Is_Active()) {
-			is_wol = true;
-		}
-
-		if (is_wol) {
-			RefPtr<WWOnline::Session> wol_session = WWOnline::Session::GetInstance(false);
-			if (wol_session.IsValid()) {
-
-				unsigned int time = TIMEGETTIME();
-				if (time < last_page || time - last_page > 1000) {
-					last_page = time;
-
-					char temp[1024];
-					strncpy(temp, input, 1023);
-					char *name = temp;
-					char *message = strchr(temp, ' ');
-					if (message) {
-						*message++ = 0;
-
-						if (strlen(name) && strlen(message)) {
-							WideStringClass wname(name, true);
-							WideStringClass wmessage(message, true);
-							wol_session->PageUser(wname, wmessage);
-						}
-					}
 				}
 			}
 		}
@@ -5128,9 +4993,7 @@ void	ConsoleFunctionManager::Init( void )
 	FunctionList.Add( new WarpConsoleFunctionClass() );
 	FunctionList.Add( new WhoIsConsoleFunctionClass() );
 	FunctionList.Add( new WindConsoleFunctionClass() );
-	FunctionList.Add( new WOLConsoleFunctionClass() );
 	FunctionList.Add( new DataSafeStatsConsoleFunctionClass() );
-	FunctionList.Add( new PatsDebugConsoleFunctionClass() );
 	FunctionList.Add( new SetSendFrequencyConsoleFunctionClass() );
 	FunctionList.Add( new TogglePacketDeltasConsoleFunctionClass() );
 	FunctionList.Add( new TogglePacketComboConsoleFunctionClass() );
@@ -5156,7 +5019,6 @@ void	ConsoleFunctionManager::Init( void )
    FunctionList.Add( new AdminMessageConsoleFunctionClass() );
 	FunctionList.Add( new GameInfoConsoleFunctionClass() );
 	FunctionList.Add( new KickConsoleFunctionClass() );
-	FunctionList.Add( new AllowConsoleFunctionClass() );
 
 	FunctionList.Add( new BanConsoleFunctionClass() );
    FunctionList.Add( new MessageConsoleFunctionClass() );
@@ -5173,9 +5035,6 @@ void	ConsoleFunctionManager::Init( void )
 	FunctionList.Add( new ClientPhysicsOptimizationConsoleFunctionClass() );
 #ifndef FREEDEDICATEDSERVER
 	FunctionList.Add( new FPSConsoleFunctionClass() );		// Steve W wanted this.
-#endif //FREEDEDICATEDSERVER
-#ifdef FREEDEDICATEDSERVER
-	FunctionList.Add( new PageConsoleFunctionClass() );
 #endif //FREEDEDICATEDSERVER
 
 

@@ -43,7 +43,6 @@
 #include "wwmemlog.h"
 #include "dialogmgr.h"
 #include "encyclopediamgr.h"
-#include "wolgmode.h"
 #include "specialbuilds.h"
 #include "demosupport.h"
 
@@ -246,13 +245,6 @@ cPlayer * cGod::Create_Player(int client_id, const WideStringClass & name,
 	//
 	if (is_new) {
 		p_player->Init();
-
-		GameModeClass* gameMode = GameModeManager::Find("WOL");
-
-		if (gameMode && gameMode->Is_Active()) {
-			WolGameModeClass* wolGame = reinterpret_cast<WolGameModeClass*>(gameMode);
-			wolGame->Init_WOL_Player(p_player);
-		}
 	}
 
 	return p_player;

@@ -44,7 +44,6 @@
 #include "font3d.h"
 #include "miscutil.h"
 #include "gamemode.h"
-#include "wolgmode.h"
 #include "player.h"
 #include "devoptions.h"
 #include "msgstatlistgroup.h"

@@ -49,11 +49,6 @@
 #include <BandTest/BandTest.h>
 
 
-namespace WWOnline {
-	class Session;
-}
-
-
 
 class BandwidthCheckerClass
 {
@@ -148,7 +143,6 @@ class BandwidthDetectWait : public SingleWait
 		BandwidthDetectWait(const BandwidthDetectWait&);
 		const BandwidthDetectWait& operator = (const BandwidthDetectWait&);
 
-		RefPtr<WWOnline::Session> WOLSession;
 		unsigned int mPingsRemaining;
 		HANDLE mEvent;
 

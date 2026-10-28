@@ -67,7 +67,6 @@
 #include "objectives.h"
 #include "multihud.h"
 #include "textureloader.h"
-#include "wolgmode.h"
 #include "renegadedialogmgr.h"
 #include "textdisplay.h"
 #include "playermanager.h"
@@ -108,7 +107,6 @@
 #include "specialbuilds.h"
 #include <wwlib/realcrc.h>
 #include "demosupport.h"
-#include "natter.h"
 #include "gamespyadmin.h"
 #include "dialogtests.h"
 #include "dialogmgr.h"
@@ -1161,27 +1159,13 @@ void CombatGameModeClass::Core_Restart(void)
 		//
 		if (The_Game() && The_Game()->IsDedicated.Is_True()) {
 			if (cNetwork::PServerConnection && cNetwork::PServerConnection->Get_Num_RHosts() == 0) {
-				GameModeClass *game_mode = GameModeManager::Find("LAN");
-
 				//
-				// Don't do this if the NAT thread is busy since it uses timers extensively.
+				// Danger! Danger!
+				// This could cause code that uses time deltas to fail. Hopefully there isn't any code doing that right now.
 				//
-				if ((game_mode && game_mode->Is_Active()) || WOLNATInterface.Is_NAT_Thread_Busy() == false) {
-					//
-					// Danger! Danger!
-					// This could cause code that uses time deltas to fail. Hopefully there isn't any code doing that right now.
-					//
-					SystemTime.Reset();
-					TimeManager::Reset();
-					GenericDataSafeClass::Reset_Timers();
-
-					game_mode = GameModeManager::Find("WOL");
-
-					if (game_mode && game_mode->Is_Active()) {
-						WolGameModeClass* wol_game = reinterpret_cast<WolGameModeClass*>(game_mode);
-						wol_game->System_Timer_Reset();
-					}
-				}
+				SystemTime.Reset();
+				TimeManager::Reset();
+				GenericDataSafeClass::Reset_Timers();
 			}
 		}
 	}

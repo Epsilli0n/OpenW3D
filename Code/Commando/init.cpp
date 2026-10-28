@@ -50,7 +50,6 @@
 #include "_globals.h"
 #include "combatgmode.h"	// gamemode
 #include "langmode.h"		// gamemode
-#include "wolgmode.h"		// gamemode
 #include "movie.h"			// gamemode
 #include "gamemenu.h"		// gamemode
 #include "overlay.h"			// gamemode
@@ -937,7 +936,6 @@ bool Game_Init(void)
 	// This order is also draw and think order
 	GameModeManager::Add( new CombatGameModeClass );
 	GameModeManager::Add( new LanGameModeClass );
-	GameModeManager::Add( new WolGameModeClass );
 	GameModeManager::Add( new OverlayGameModeClass );
 	GameModeManager::Add( new MenuGameModeClass2 );		// Putting menu after overlay so we see the text
 	GameModeManager::Add( new MovieGameModeClass );

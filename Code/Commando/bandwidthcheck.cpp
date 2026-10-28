@@ -55,7 +55,7 @@
 #include "specialbuilds.h"
 #include "gamespyadmin.h"
 
-#include <WWOnline/WOLSession.h>
+#include <wwlib/vector.h>
 #include <cstdio>
 #include <winsock2.h>
 
@@ -855,11 +855,6 @@ BandwidthDetectWait::BandwidthDetectWait(void) :
 	mEvent(nullptr),
 	mPingsRemaining(0xffffffff)
 {
-	if (!cGameSpyAdmin::Is_Gamespy_Game()) {
-		WOLSession = WWOnline::Session::GetInstance(false);
-		assert(WOLSession.IsValid());
-	}
-
 }
 
 
@@ -880,8 +875,6 @@ BandwidthDetectWait::BandwidthDetectWait(void) :
 BandwidthDetectWait::~BandwidthDetectWait()
 {
 	WWDEBUG_SAY(("BandwidthDetectWait: End - %S\n", mEndText.Peek_Buffer()));
-
-	if (WOLSession.IsValid()) WOLSession->EnablePinging(true);
 
 	if (mEvent) {
 		CloseHandle(mEvent);
@@ -913,7 +906,6 @@ void BandwidthDetectWait::WaitBeginning(void)
 		WWDEBUG_SAY(("BandwidthDetectWait: Can't create event\n"));
 		EndWait(Error, TRANSLATE (IDS_MENU_FAILED_TO_CREATE_BW_EVENT));
 	} else {
-		if (WOLSession.IsValid()) WOLSession->EnablePinging(false);
 		mTimeout = 15000;
 	}
 }
@@ -940,12 +932,7 @@ WaitCondition::WaitResult BandwidthDetectWait::GetResult(void)
 		/*
 		** Wait for pings to finish first.
 		*/
-
 		unsigned int pingsWaiting = 0;
-		if (!cGameSpyAdmin::Is_Gamespy_Game()) {
-			pingsWaiting = WOLSession->GetPendingPingCount();
-		}
-
 
 		if (mPingsRemaining != pingsWaiting) {
 			mPingsRemaining = pingsWaiting;
@@ -968,10 +955,6 @@ WaitCondition::WaitResult BandwidthDetectWait::GetResult(void)
 				}
 			}
 		}
-	}
-
-	if (mEndResult != Waiting && WOLSession.IsValid()) {
-		WOLSession->EnablePinging(true);
 	}
 
 	return(mEndResult);

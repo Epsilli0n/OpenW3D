@@ -60,15 +60,8 @@
 #include "input.h"
 #include "dlgmainmenu.h"
 #include "DlgWebPage.h"
-#include "dlgmpwolpagebuddy.h"
-#include "dlgmpwolbuddies.h"
-#include "dlgmpwolchat.h"
-#include "dlgmpwolgamelist.h"
 #include "dlgsavegame.h"
 #include "dlgcontrols.h"
-#include "dlgmpwolquickmatchoptions.h"
-#include "dlgmpwolmain.h"
-#include "DlgWOLSettings.h"
 #include "dlghelpscreen.h"
 #include "dlgcncreference.h"
 #include "wwmemlog.h"
@@ -118,7 +111,7 @@ DialogFactoryBaseClass *FactoryArray[FACTORY_COUNT] =
 	nullptr,//new DialogFactoryClass<MPServerStartMenuClass>,
 	new DialogFactoryClass<MultiplayOptionsMenuClass>,
 	nullptr,
-	new DialogFactoryClass<MPWolMainMenuClass>,
+	nullptr,	//IDC_MENU_MP_INTERNET_GAME_BUTTON
 	new DialogFactoryClass<MPLanGameListMenuClass>,
 	nullptr,	//IDC_MENU_MP_LAN_JOIN_BUTTON
 	nullptr,	//IDC_MENU_MP_LAN_START_BUTTON
@@ -261,14 +254,6 @@ RenegadeDialogMgrClass::Goto_Location (LOCATION location)
 			START_DIALOG (SplashOutroMenuDialogClass);
 			break;
 
-		case LOC_INTERNET_MAIN:
-			MPWolMainMenuClass::Display ();
-			break;
-
-		case LOC_INTERNET_GAME_LIST:
-			MPWolGameListMenuClass::DoDialog ();
-			break;
-
 		case LOC_LAN_MAIN:
 			MPLanGameListMenuClass::Display ();
 			break;
@@ -392,34 +377,8 @@ Default_On_Command (DialogBaseClass *dialog, int ctrl_id, int /* mesage_id */, u
 			DlgWebPage::DoDialog("Ladder");
 			break;
 
-		case IDC_MP_SHORTCUT_ACCOUNT:
-			DlgWOLSettings::DoDialog();
-			break;
-
-		#ifdef QUICKMATCH_OPTIONS
-		case IDC_MP_SHORTCUT_QUICKMATCH_OPTIONS:
-			START_DIALOG(MPWolQuickMatchOptionsMenuClass);
-			break;
-		#endif // QUICKMATCH_OPTIONS
-
 		case IDC_MP_SHORTCUT_NET_STATUS:
 			DlgWebPage::DoDialog("NetStatus");
-			break;
-
-		case IDC_MP_SHORTCUT_BUDDIES:
-			MPWolBuddiesMenuClass::Display();
-			break;
-
-		case IDC_MP_SHORTCUT_PAGE_BUDDY:
-			START_DIALOG (MPWolPageBuddyPopupClass);
-			break;
-
-		case IDC_MP_SHORTCUT_CHAT:
-			MPWolChatMenuClass::DoDialog();
-			break;
-
-		case IDC_MP_SHORTCUT_GAMELIST:
-			MPWolGameListMenuClass::DoDialog();
 			break;
 
 		case IDC_MP_SHORTCUT_INTERNET_OPTIONS:

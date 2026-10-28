@@ -53,8 +53,6 @@
 #include "vehicle.h"
 #include "assets.h"
 #include "translatedb.h"
-#include "wolgmode.h"
-#include <WWOnline/WOLUser.h>
 #include "string_ids.h"
 #include "mousemgr.h"
 #include "directinput.h"
@@ -429,29 +427,5 @@ CNCTeamInfoDialogClass::On_Frame_Update (void)
 
 void CNCTeamInfoDialogClass::Build_Player_Display_Name(const cPlayer* player, WideStringClass& outName)
 {
-// Denzil 02/24/02 Day 1 Patch - Do not show clan abbreviation for now because
-// it does not always fit in the space alloted. For now it is better not to
-// show it than to have it chopped off.
-#if(0)
-	GameModeClass* gameMode = GameModeManager::Find("WOL");
-
-	if (gameMode && gameMode->Is_Active()) {
-		WolGameModeClass* wolGame = static_cast<WolGameModeClass*>(gameMode);
-		WWASSERT(wolGame);
-
-		RefPtr<WWOnline::UserData> user = wolGame->Get_WOL_User_Data(player->Get_Name());
-
-		if (user.IsValid()) {
-			// Set there clan information
-			RefPtr<WWOnline::SquadData> clan = user->GetSquad();
-
-			if (clan.IsValid()) {
-				outName.Format(U_CHAR("%s [%S]"), player->Get_Name(), clan->GetAbbr());
-				return;
-			}
-		}
-	}
-#endif
-
 	outName = player->Get_Name();
 }

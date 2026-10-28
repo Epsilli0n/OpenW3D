@@ -46,7 +46,6 @@
 #include "dlgevabuildingstab.h"
 #include "cnetwork.h"
 #include "gamemode.h"
-#include "wolgmode.h"
 #include "dialogmgr.h"
 #include "gameinitmgr.h"
 #include "gametype.h"
@@ -160,7 +159,6 @@ EVAEncyclopediaMenuClass::On_Init_Dialog (void)
 		cNetwork::I_Am_Client() &&
 		//The_Game()->Is_Team_Game() &&
 		The_Game()->IsTeamChangingAllowed.Is_True() &&
-		(!(GameModeManager::Find("WOL") != nullptr && GameModeManager::Find("WOL")->Is_Active()) || The_Game()->IsLaddered.Is_False()) &&
 		GameModeManager::Find("Combat") != nullptr &&
 		GameModeManager::Find("Combat")->Is_Active();
 
@@ -304,7 +302,7 @@ void
 EVAEncyclopediaMenuClass::Exit_Game (void)
 {
 	bool stop = false;
-	if (GameModeManager::Find("WOL")->Is_Active() || GameModeManager::Find("LAN")->Is_Active()) {
+	if (GameModeManager::Find("LAN")->Is_Active()) {
 		if (cNetwork::I_Am_Server() && The_Game() && The_Game()->IsDedicated.Is_True() && SlaveMaster.Am_I_Slave()) {
 			stop = true;
 		}

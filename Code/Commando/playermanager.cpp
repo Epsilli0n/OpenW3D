@@ -1049,14 +1049,6 @@ void cPlayerManager::Construct_Heading(WideStringClass & string, bool force_verb
 	   string += substring;
 	}
 
-   //
-	// WOL rank
-	//
-   if (GameModeManager::Find("WOL")->Is_Active() && is_verbose) {
-		substring.Format(U_CHAR("%-8s"), TRANSLATION(IDS_MP_RANK));
-	   string += substring;
-   }
-
 #ifdef WWDEBUG
    //
    // Ping

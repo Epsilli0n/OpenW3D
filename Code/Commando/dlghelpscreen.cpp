@@ -48,7 +48,6 @@
 #include "dlgevabuildingstab.h"
 #include "cnetwork.h"
 #include "gamemode.h"
-#include "wolgmode.h"
 #include "dialogmgr.h"
 #include "gametype.h"
 #endif

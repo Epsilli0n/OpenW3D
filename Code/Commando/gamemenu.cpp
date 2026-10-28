@@ -46,7 +46,6 @@
 #include "cnetwork.h"
 #include "netinterface.h"
 #include "langmode.h"
-#include "wolgmode.h"
 #include "miscutil.h"
 #include "_globals.h"
 #include "player.h"

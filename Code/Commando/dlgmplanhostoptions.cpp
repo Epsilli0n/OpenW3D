@@ -50,14 +50,9 @@
 #include "translatedb.h"
 #include "nicenum.h"
 #include "useroptions.h"
-#include "gamemode.h"
-#include "wolgmode.h"
 #include "campaign.h"
-#include "mpsettingsmgr.h"
 #include "specialbuilds.h"
 #include "dlgmpslaveservers.h"
-#include "wolgmode.h"
-#include "WOLLoginProfile.h"
 #include "dlgserversaveload.h"
 #include "modpackagemgr.h"
 #include "modpackage.h"
@@ -73,8 +68,6 @@
 ////////////////////////////////////////////////////////////////
 MPLanHostOptionsMenuClass::MPLanHostOptionsMenuClass (void)	:
 	MenuDialogClass (GetRenegadeDialog(RenegadeDialogID::IDD_MP_LAN_HOST_OPTIONS)),
-	mStartTheGame (false),
-	mClanID (0),
 	MapCycleDialog (nullptr)
 {
 	return ;
@@ -156,29 +149,6 @@ MPLanHostOptionsMenuClass::Enable_Mod_Selection (bool onoff)
 
 ////////////////////////////////////////////////////////////////
 //
-//	On_Periodic
-//
-////////////////////////////////////////////////////////////////
-void
-MPLanHostOptionsMenuClass::On_Periodic (void)
-{
-	MenuDialogClass::On_Periodic();
-
-	if (mStartTheGame) {
-		WWASSERT(PTheGameData != nullptr);
-
-		Start_Game(The_Game());
-		mStartTheGame = false;
-
-		End_Dialog();
-	}
-
-	return ;
-}
-
-
-////////////////////////////////////////////////////////////////
-//
 //	On_Command
 //
 ////////////////////////////////////////////////////////////////
@@ -223,17 +193,7 @@ MPLanHostOptionsMenuClass::On_Command (int ctrl_id, int message_id, unsigned int
 							}
 
 							SlaveMaster.Startup_Slaves();
-
-							GameModeClass* gameMode = GameModeManager::Find("WOL");
-
-							if (gameMode && gameMode->Is_Active()) {
-								WolGameModeClass* wolGame = static_cast<WolGameModeClass*>(gameMode);
-								WWASSERT(wolGame);
-								wolGame->SignalMe(*this);
-								wolGame->Create_Game(The_Game());
-							} else {
-								Start_Game(The_Game());
-							}
+							Start_Game(The_Game());
 						} else {
 							WideStringClass errorMsg(0, true);
 							errorMsg.Format(U_CHAR("%s\n\n%s"), TRANSLATE(IDS_MENU_TEXT330), (const unichar_t*)outMsg);
@@ -266,28 +226,6 @@ MPLanHostOptionsMenuClass::On_Command (int ctrl_id, int message_id, unsigned int
 
 
 
-void MPLanHostOptionsMenuClass::ReceiveSignal(WolGameModeClass& gameMode)
-{
-	if (gameMode.Channel_Create_OK()) {
-		mStartTheGame = true;
-		mClanID = 0;
-
-		// If this is a clan game then get the current users clan.
-		if (The_Game()->IsClanGame.Is_True()) {
-			RefPtr<WWOnline::Session> wolSession = WWOnline::Session::GetInstance(false);
-
-			if (wolSession.IsValid()) {
-				RefPtr<WWOnline::UserData> user = wolSession->GetCurrentUser();
-
-				if (user.IsValid()) {
-					mClanID = user->GetSquadID();
-				}
-			}
-		}
-	}
-}
-
-
 void MPLanHostOptionsMenuClass::Start_Game(cGameData* theGame)
 {
 	CampaignManager::Select_Backdrop_Number_By_MP_Type( theGame->Get_Game_Type() );
@@ -296,7 +234,7 @@ void MPLanHostOptionsMenuClass::Start_Game(cGameData* theGame)
 	GameInitMgrClass::Set_Is_Server_Required(true);
 
 	int side = cNetInterface::Get_Side_Preference();
-	GameInitMgrClass::Start_Game(theGame->Get_Map_Name(), side, mClanID);
+	GameInitMgrClass::Start_Game(theGame->Get_Map_Name(), side, 0);
 }
 
 ////////////////////////////////////////////////////////////////
@@ -304,29 +242,11 @@ void MPLanHostOptionsMenuClass::Start_Game(cGameData* theGame)
 //	MPLanHostBasicOptionsTabClass
 //
 ////////////////////////////////////////////////////////////////
-MPLanHostBasicOptionsTabClass* MPLanHostBasicOptionsTabClass::_mInstance = nullptr;
 int MPLanHostBasicOptionsTabClass::BandTestMaxPlayers = 0;
-
-MPLanHostBasicOptionsTabClass* MPLanHostBasicOptionsTabClass::Get_Instance(void)
-{
-	if (_mInstance) {
-		_mInstance->Add_Ref();
-		return _mInstance;
-	}
-
-	return nullptr;
-}
 
 MPLanHostBasicOptionsTabClass::MPLanHostBasicOptionsTabClass (void)	:
 	ChildDialogClass (GetRenegadeDialog(RenegadeDialogID::IDD_MP_LAN_HOST_OPTIONS_BASIC_TAB))
 {
-	assert(_mInstance == nullptr);
-	_mInstance = this;
-}
-
-MPLanHostBasicOptionsTabClass::~MPLanHostBasicOptionsTabClass (void)
-{
-	_mInstance = nullptr;
 }
 
 ////////////////////////////////////////////////////////////////
@@ -337,8 +257,6 @@ MPLanHostBasicOptionsTabClass::~MPLanHostBasicOptionsTabClass (void)
 void
 MPLanHostBasicOptionsTabClass::On_Init_Dialog (void)
 {
-	bool wolGame = GameModeManager::Find("WOL")->Is_Active();
-
 	//
 	//	Fill in the game name
 	//
@@ -361,7 +279,7 @@ MPLanHostBasicOptionsTabClass::On_Init_Dialog (void)
 	//
 	//	Fill in the max-players control on the dialog
 	//
-	if (wolGame || cGameSpyAdmin::Is_Gamespy_Game()) {
+	if (cGameSpyAdmin::Is_Gamespy_Game()) {
 		BandTestMaxPlayers = (cUserOptions::BandwidthBps.Get() / 250000) * 4;
 		if (BandTestMaxPlayers < 2) {
 			if (cUserOptions::BandwidthBps.Get() > 100000) {
@@ -414,29 +332,9 @@ MPLanHostBasicOptionsTabClass::On_Init_Dialog (void)
 		//	Select the default entry in the radar_combobox
 		//
 		nic_combobox->Set_Curr_Sel ( current_index );
-
-		Enable_Dlg_Item(IDC_HOSTING_IP_COMBO, !wolGame);
 	}
 
-	int sidePref = cNetInterface::Get_Side_Preference();
-
-	if (wolGame) {
-		RefPtr<WWOnline::Session> wolSession = WWOnline::Session::GetInstance(false);
-
-		if (wolSession.IsValid()) {
-			const RefPtr<WWOnline::LoginInfo>& login = wolSession->GetCurrentLogin();
-			assert(login.IsValid());
-
-			LoginProfile* profile = LoginProfile::Get(login->GetNickname());
-
-			if (profile) {
-				sidePref = profile->GetSidePreference();
-				profile->Release_Ref();
-			}
-		}
-	}
-
-	InitSideChoiceCombo(sidePref);
+	InitSideChoiceCombo(cNetInterface::Get_Side_Preference());
 
 	ChildDialogClass::On_Init_Dialog ();
 	return ;
@@ -522,7 +420,7 @@ MPLanHostBasicOptionsTabClass::On_Apply (void)
 	//
 	//	Read the IP NIC Enumeration combobox
 	//
-	if (!GameModeManager::Find("WOL")->Is_Active() && !cGameSpyAdmin::Get_Is_Server_Gamespy_Listed()) {
+	if (!cGameSpyAdmin::Get_Is_Server_Gamespy_Listed()) {
 		ComboBoxCtrlClass *nic_combobox = (ComboBoxCtrlClass *)Get_Dlg_Item (IDC_HOSTING_IP_COMBO);
 		if (nic_combobox != nullptr) {
 			int curr_sel = nic_combobox->Get_Curr_Sel ();
@@ -534,19 +432,7 @@ MPLanHostBasicOptionsTabClass::On_Apply (void)
 				The_Game()->Set_Ip_Address(nics[curr_sel]);
 			}
 		}
-	} else if (!GameModeManager::Find("WOL")->Is_Active() && cGameSpyAdmin::Get_Is_Server_Gamespy_Listed()) {
-		ComboBoxCtrlClass *nic_combobox = (ComboBoxCtrlClass *)Get_Dlg_Item (IDC_HOSTING_IP_COMBO);
-		if (nic_combobox != nullptr) {
-			int curr_sel = nic_combobox->Get_Curr_Sel ();
-			WWASSERT(curr_sel < cNicEnum::Get_Num_GameSpy_Nics());
-			if (curr_sel >= 0) {
-				unsigned int * nics = cNicEnum::Get_GameSpy_Nics();
-				WWASSERT(nics != nullptr);
-				cUserOptions::PreferredGameSpyNic.Set(nics[curr_sel]);
-				The_Game()->Set_Ip_Address(nics[curr_sel]);
-			}
-		}
-	} else if (!GameModeManager::Find("WOL")->Is_Active() && cGameSpyAdmin::Get_Is_Server_Gamespy_Listed()) {
+	} else {
 		ComboBoxCtrlClass *nic_combobox = (ComboBoxCtrlClass *)Get_Dlg_Item (IDC_HOSTING_IP_COMBO);
 		if (nic_combobox != nullptr) {
 			int curr_sel = nic_combobox->Get_Curr_Sel ();
@@ -578,18 +464,9 @@ MPLanHostBasicOptionsTabClass::On_Apply (void)
 //
 ////////////////////////////////////////////////////////////////
 void
-MPLanHostBasicOptionsTabClass::On_EditCtrl_Change (EditCtrlClass *edit, int ctrlID)
+MPLanHostBasicOptionsTabClass::On_EditCtrl_Change (EditCtrlClass * /* edit */, int ctrlID)
 {
-	if (IDC_PASSWORD_EDIT == ctrlID) {
-
-		//
-		// Flag the game as passworded if the user enters text into the password edit.
-		//
-		const unichar_t* text = edit->Get_Text ();
-		bool hasPassword = (text && (u_strlen (text) > 0));
-		SendSignal (hasPassword);
-
-	} else if (ctrlID == IDC_NUM_PLAYERS_EDIT) {
+	if (ctrlID == IDC_NUM_PLAYERS_EDIT) {
 
 		int max_players = std::min(BandTestMaxPlayers, NetworkObjectClass::MAX_CLIENT_COUNT-1);
 
@@ -602,8 +479,7 @@ MPLanHostBasicOptionsTabClass::On_EditCtrl_Change (EditCtrlClass *edit, int ctrl
 			player_count = std::max (player_count, 0);
 			Set_Dlg_Item_Int (IDC_NUM_PLAYERS_EDIT, player_count);
 		}
-		bool wol_game = GameModeManager::Find("WOL")->Is_Active();
-		if ((wol_game || cGameSpyAdmin::Is_Gamespy_Game()) && player_count > max_players) {
+		if (cGameSpyAdmin::Is_Gamespy_Game() && player_count > max_players) {
 			player_count = max_players;
 			Set_Dlg_Item_Int (IDC_NUM_PLAYERS_EDIT, player_count);
 			DlgMsgBox::DoDialog(IDS_MENU_TEXT329, IDS_MP_MAXPLAYER_WARNING, DlgMsgBox::Okay);
@@ -634,13 +510,6 @@ MPLanHostAdvancedOptionsTabClass::MPLanHostAdvancedOptionsTabClass (void)	:
 void
 MPLanHostAdvancedOptionsTabClass::On_Init_Dialog (void)
 {
-	MPLanHostBasicOptionsTabClass* basicTab = MPLanHostBasicOptionsTabClass::Get_Instance();
-
-	if (basicTab) {
-		basicTab->SignalMe(*this);
-		basicTab->Release_Ref();
-	}
-
 #ifdef FREEDEDICATEDSERVER
 	WWASSERT(PTheGameData != nullptr);
 	The_Game ()->IsDedicated.Set(true);
@@ -657,14 +526,11 @@ MPLanHostAdvancedOptionsTabClass::On_Init_Dialog (void)
 
 	// Change teams is ON if team editing and changing team allowed is true
 	bool canChangeTeams = The_Game()->Is_Editable_Teaming();
-	mChangeTeams = canChangeTeams && The_Game()->IsTeamChangingAllowed.Is_True();
-	Check_Dlg_Button(IDC_TEAM_CHANGE_CHECK, mChangeTeams);
+	Check_Dlg_Button(IDC_TEAM_CHANGE_CHECK, canChangeTeams && The_Game()->IsTeamChangingAllowed.Is_True());
 	Enable_Dlg_Item(IDC_TEAM_CHANGE_CHECK, canChangeTeams);
 
 	// Remix teams is ON if team change is false and remix setting is true.
-	mRemixTeams = The_Game()->IsTeamChangingAllowed.Is_False() && The_Game()->RemixTeams.Is_True();
-	Check_Dlg_Button(IDC_REMIX_TEAMS_CHECK, mRemixTeams);
-	Enable_Dlg_Item(IDC_REMIX_TEAMS_CHECK, The_Game()->IsTeamChangingAllowed.Is_False());
+	Check_Dlg_Button(IDC_REMIX_TEAMS_CHECK, The_Game()->IsTeamChangingAllowed.Is_False() && The_Game()->RemixTeams.Is_True());
 
 	//Check_Dlg_Button (IDC_TRUST_CLIENTS_CHECK,		The_Game ()->IsClientTrusted.Is_True ());
 #ifdef MULTIPLAYERDEMO
@@ -674,22 +540,20 @@ MPLanHostAdvancedOptionsTabClass::On_Init_Dialog (void)
 	Check_Dlg_Button (IDC_SERVER_RESTART_CHECK,		The_Game ()->IsAutoRestart.Is_True ());
 #endif // MULTIPLAYERDEMO
 
-	// Configure WOL settings
-	mIsWOLGame = GameModeManager::Find("WOL")->Is_Active();
-	mPassword = The_Game()->IsPassworded.Get();
-	mLaddered = (mIsWOLGame && The_Game()->IsLaddered.Is_True());
-	mClanGame = (mIsWOLGame && IsHostAClanMember() && The_Game()->IsClanGame.Is_True());
-	mQuickmatch = (mIsWOLGame && !mPassword && The_Game()->Is_QuickMatch_Server());
-	ConfigureWOLControls();
+	// Quickmatch, laddered and clan games are not available
+	Check_Dlg_Button(IDC_ALLOW_QUICKMATCH, false);
+	Enable_Dlg_Item(IDC_ALLOW_QUICKMATCH, false);
+	Check_Dlg_Button(IDC_LADDERED_CHECK, false);
+	Enable_Dlg_Item(IDC_LADDERED_CHECK, false);
+	Check_Dlg_Button(IDC_CLAN_GAME_CHECK, false);
+	Enable_Dlg_Item(IDC_CLAN_GAME_CHECK, false);
 
-	if (The_Game()->IsDedicated.Is_False()) {// || (mIsWOLGame && strlen(MPSettingsMgrClass::Get_Auto_Login()) == 0)) {
+	if (The_Game()->IsDedicated.Is_False()) {
 		Check_Dlg_Button(IDC_SERVER_RESTART_CHECK, false);
 		Enable_Dlg_Item(IDC_SERVER_RESTART_CHECK, false);
 	}
 
-	if (!GameModeManager::Find("WOL")->Is_Active()) {
-		Enable_Dlg_Item(IDC_MENU_MP_LAN_SLAVE_SERVER_BUTTON, false);
-	}
+	Enable_Dlg_Item(IDC_MENU_MP_LAN_SLAVE_SERVER_BUTTON, false);
 
 	//
 	//	Fill in the Motd control
@@ -697,15 +561,6 @@ MPLanHostAdvancedOptionsTabClass::On_Init_Dialog (void)
 	Set_Dlg_Item_Text (IDC_MESSAGE_OF_THE_DAY_EDIT, The_Game ()->Get_Motd ());
 
 	ChildDialogClass::On_Init_Dialog ();
-
-	//
-	//	Don't allow the user to select a MOD package if the game is laddered
-	//
-	MPLanHostOptionsMenuClass *parent_dlg = static_cast<MPLanHostOptionsMenuClass *> (Get_Parent_Dialog ());
-	if (parent_dlg != nullptr) {
-		parent_dlg->Enable_Mod_Selection (mLaddered == false);
-	}
-
 	return ;
 }
 
@@ -726,21 +581,11 @@ MPLanHostAdvancedOptionsTabClass::On_Apply (void)
 	The_Game()->IsDedicated.Set (Is_Dlg_Button_Checked (IDC_DEDICATED_SERVER_CHECK));
 	The_Game()->IsAutoRestart.Set (Is_Dlg_Button_Checked (IDC_SERVER_RESTART_CHECK));
 	The_Game()->IsTeamChangingAllowed.Set (Is_Dlg_Button_Checked (IDC_TEAM_CHANGE_CHECK));
-	The_Game()->Set_QuickMatch_Server(Is_Dlg_Button_Checked(IDC_ALLOW_QUICKMATCH));
-	The_Game()->IsLaddered.Set (Is_Dlg_Button_Checked (IDC_LADDERED_CHECK));
-	The_Game()->IsClanGame.Set (Is_Dlg_Button_Checked (IDC_CLAN_GAME_CHECK));
+	The_Game()->Set_QuickMatch_Server(false);
+	The_Game()->IsLaddered.Set (false);
+	The_Game()->IsClanGame.Set (false);
 	//The_Game()->IsClientTrusted.Set (Is_Dlg_Button_Checked (IDC_TRUST_CLIENTS_CHECK));
 	The_Game()->RemixTeams.Set (Is_Dlg_Button_Checked (IDC_REMIX_TEAMS_CHECK));
-
-	//
-	// TSS022402
-	// If laddering is on, silently turn off FF. Exploit concerns.
-	// N.B. This is a hack. Leverages off the fact that
-	// MPLanHostCnCOptionsTabClass::On_Apply is called first.
-	//
-	if (The_Game()->IsLaddered.Is_True()) {
-		The_Game()->IsFriendlyFirePermitted.Set(false);
-	}
 
 	//
 	// Save the message of the day (MOTD)
@@ -761,7 +606,7 @@ MPLanHostAdvancedOptionsTabClass::On_Apply (void)
 //
 ////////////////////////////////////////////////////////////////
 void
-MPLanHostAdvancedOptionsTabClass::On_Command (int ctrl_id, int /* message_id */, unsigned int param)
+MPLanHostAdvancedOptionsTabClass::On_Command (int ctrl_id, int /* message_id */, unsigned int /* param */)
 {
 	bool restart_enabled = true;
 
@@ -782,22 +627,6 @@ MPLanHostAdvancedOptionsTabClass::On_Command (int ctrl_id, int /* message_id */,
 				Enable_Dlg_Item(IDC_SERVER_RESTART_CHECK, false);
 			}
 #endif // MULTIPLAYERDEMO
-
-			bool canClan = (IsHostAClanMember() && !mChangeTeams && !mRemixTeams);
-			Enable_Dlg_Item(IDC_CLAN_GAME_CHECK, (mIsWOLGame && canClan));
-
-			bool clanGame = (((param != 0) || canClan) ? mClanGame : false);
-			Check_Dlg_Button(IDC_CLAN_GAME_CHECK, (mIsWOLGame && clanGame));
-		}
-		break;
-
-		case IDC_SERVER_RESTART_CHECK: {
-			if (Is_Dlg_Button_Checked(IDC_SERVER_RESTART_CHECK)) {
-				if (GameModeManager::Find("WOL")->Is_Active() && strlen(MPSettingsMgrClass::Get_Auto_Login()) == 0) {
-					DlgMsgBox::DoDialog (IDS_MENU_TEXT329, IDS_MENU_NEED_AUTO_LOGIN, DlgMsgBox::YesNo, this);
-					Check_Dlg_Button(IDC_SERVER_RESTART_CHECK, false);
-				}
-			}
 		}
 		break;
 
@@ -811,192 +640,7 @@ MPLanHostAdvancedOptionsTabClass::On_Command (int ctrl_id, int /* message_id */,
 				DlgMsgBox::DoDialog(IDS_MENU_TEXT329, IDS_SLAVES_NEED_WINDOWED, DlgMsgBox::Okay);
 			}
 			break;
-
-		case IDC_TEAM_CHANGE_CHECK:
-			{
-			mChangeTeams = (param != 0);
-
-			// Change Team and Clans are mutually exclusive
-			bool canClan = (!mChangeTeams && !Is_Dlg_Button_Checked(IDC_REMIX_TEAMS_CHECK) && !Is_Dlg_Button_Checked(IDC_ALLOW_QUICKMATCH));
-			Enable_Dlg_Item(IDC_CLAN_GAME_CHECK, canClan);
-			Check_Dlg_Button(IDC_CLAN_GAME_CHECK, canClan && mClanGame);
-
-			// Change Team and laddered are mutually exclusive
-			Enable_Dlg_Item(IDC_LADDERED_CHECK, !mChangeTeams);
-			Check_Dlg_Button(IDC_LADDERED_CHECK, !mChangeTeams && mLaddered);
-			}
-			break;
-
-		case IDC_REMIX_TEAMS_CHECK:
-			{
-			mRemixTeams = (param != 0);
-
-			// Remix teams and clans are mutually exclusive
-			bool canClan = (!mRemixTeams && !Is_Dlg_Button_Checked(IDC_TEAM_CHANGE_CHECK) && !Is_Dlg_Button_Checked(IDC_ALLOW_QUICKMATCH));
-			Enable_Dlg_Item(IDC_CLAN_GAME_CHECK, canClan);
-			Check_Dlg_Button(IDC_CLAN_GAME_CHECK, canClan && mClanGame);
-			}
-			break;
-
-		// If clan is checked then quickmatch is not allowed.
-		case IDC_CLAN_GAME_CHECK:
-			mClanGame = (param != 0);
-			ConfigureWOLControls();
-			break;
-
-		// If quickmatch is checked then laddered must be checked as well.
-		case IDC_ALLOW_QUICKMATCH:
-			mQuickmatch = (param != 0);
-			ConfigureWOLControls();
-			break;
-
-		// If clan is checked then quickmatch is not allowed.
-		case IDC_LADDERED_CHECK:
-			{
-			mLaddered = (param != 0);
-
-			//
-			//	Don't allow the user to select a MOD package if the game is laddered
-			//
-			MPLanHostOptionsMenuClass *parent_dlg = static_cast<MPLanHostOptionsMenuClass *> (Get_Parent_Dialog ());
-			if (parent_dlg != nullptr) {
-				parent_dlg->Enable_Mod_Selection (mLaddered == false);
-			}
-
-			// Laddered games and team changing is mutually exclusive
-			bool canChangeTeam = (!mLaddered && !Is_Dlg_Button_Checked(IDC_CLAN_GAME_CHECK));
-			Enable_Dlg_Item(IDC_TEAM_CHANGE_CHECK, canChangeTeam);
-			Check_Dlg_Button(IDC_TEAM_CHANGE_CHECK, canChangeTeam && mChangeTeams);
-			}
-			break;
 	}
-}
-
-
-
-void MPLanHostAdvancedOptionsTabClass::HandleNotification (DlgMsgBoxEvent &event)
-{
-	//
-	// We only use a message box for the auto login confirm.
-	//
-	if (event.Event() == DlgMsgBoxEvent::Yes) {
-		//Enable_Dlg_Item (IDC_SERVER_RESTART_CHECK, true);
-		Check_Dlg_Button(IDC_SERVER_RESTART_CHECK, true);
-		const char* login = MPSettingsMgrClass::Get_Last_Login();
-		MPSettingsMgrClass::Set_Auto_Login(login);
-	}
-}
-
-
-
-
-void MPLanHostAdvancedOptionsTabClass::ReceiveSignal(bool& hasPassword)
-{
-	if (mPassword != hasPassword) {
-		mPassword = hasPassword;
-		ConfigureWOLControls();
-	}
-}
-
-
-void MPLanHostAdvancedOptionsTabClass::ConfigureWOLControls(void)
-{
-	bool isDedicated = Is_Dlg_Button_Checked(IDC_DEDICATED_SERVER_CHECK);
-	bool isQuickmatch = Is_Dlg_Button_Checked(IDC_ALLOW_QUICKMATCH);
-	bool isTeamChange = Is_Dlg_Button_Checked(IDC_TEAM_CHANGE_CHECK);
-	bool isTeamRemix = Is_Dlg_Button_Checked(IDC_REMIX_TEAMS_CHECK);
-	bool isClanMember = IsHostAClanMember();
-
-	//---------------------------------------------------------------------------
-	// Clan games allowed if:
-	//   - WOL is active.
-	//   - Quickmatch is OFF
-	//   - Change team is OFF
-	//   - Remix team is OFF
-	//   - Host is member of a clan OR game is dedicated.
-	//
-	// Requirements if ON:
-	//   - Team Change must be OFF
-	//   - Team Remix must be OFF
-	//---------------------------------------------------------------------------
-	bool canClan = (mIsWOLGame && !isQuickmatch && !isTeamChange && !isTeamRemix && (isClanMember || isDedicated));
-	Enable_Dlg_Item(IDC_CLAN_GAME_CHECK, canClan);
-
-	bool clanned = (canClan && mClanGame);
-	Check_Dlg_Button(IDC_CLAN_GAME_CHECK, clanned);
-
-	//---------------------------------------------------------------------------
-	// Quickmatch allowed if:
-	//   - WOL is active
-	//   - No password
-	//   - Clan is OFF
-	//
-	// Requirements if ON:
-	//   - Ladderd must be ON
-	//   - Clan must be OFF
-	//---------------------------------------------------------------------------
-	bool canQuickmatch = (mIsWOLGame && !mPassword && !clanned);
-	Enable_Dlg_Item(IDC_ALLOW_QUICKMATCH, canQuickmatch);
-
-	isQuickmatch = (canQuickmatch && mQuickmatch);
-	Check_Dlg_Button(IDC_ALLOW_QUICKMATCH, isQuickmatch);
-
-	//---------------------------------------------------------------------------
-	// Ladder option available if WOL active and quickmatch is OFF
-	//---------------------------------------------------------------------------
-	bool canLadder = (mIsWOLGame && !isQuickmatch && !isTeamChange);
-	Enable_Dlg_Item(IDC_LADDERED_CHECK, canLadder);
-
-	bool laddered = ((canLadder && mLaddered) || isQuickmatch);
-	Check_Dlg_Button(IDC_LADDERED_CHECK, laddered);
-
-	//---------------------------------------------------------------------------
-	// Team change not allowed with clan or laddered games.
-	//---------------------------------------------------------------------------
-	bool canChangeTeams = (!clanned && !laddered && The_Game()->Is_Editable_Teaming());
-	Enable_Dlg_Item(IDC_TEAM_CHANGE_CHECK, canChangeTeams);
-
-	bool changeTeams = (canChangeTeams && mChangeTeams);
-	Check_Dlg_Button(IDC_TEAM_CHANGE_CHECK, changeTeams);
-
-	//---------------------------------------------------------------------------
-	// Remix teams not allowed with clan games
-	//---------------------------------------------------------------------------
-	bool remixTeams = (!clanned && mRemixTeams);
-	Enable_Dlg_Item(IDC_REMIX_TEAMS_CHECK, !clanned);
-	Check_Dlg_Button(IDC_REMIX_TEAMS_CHECK, remixTeams);
-
-	//---------------------------------------------------------------------------
-	// Double check availability of controls
-	//---------------------------------------------------------------------------
-
-	// Ladder is available only if change teams if off
-	Enable_Dlg_Item(IDC_LADDERED_CHECK, !changeTeams && canLadder);
-	Check_Dlg_Button(IDC_LADDERED_CHECK, !changeTeams && laddered);
-
-	// Clan is available only if change team and remix team is off.
-	canClan = (!changeTeams && !remixTeams && canClan);
-	Enable_Dlg_Item(IDC_CLAN_GAME_CHECK, canClan);
-	Check_Dlg_Button(IDC_CLAN_GAME_CHECK, canClan && clanned);
-}
-
-
-bool MPLanHostAdvancedOptionsTabClass::IsHostAClanMember(void) const
-{
-	GameModeClass* gameMode = GameModeManager::Find("WOL");
-
-	if (gameMode && gameMode->Is_Active()) {
-		WolGameModeClass* wolGame = static_cast<WolGameModeClass*>(gameMode);
-		WWASSERT(wolGame != nullptr);
-
-		RefPtr<WWOnline::UserData> host = wolGame->Get_WOL_User_Data(The_Game()->Get_Owner());
-
-		if (host.IsValid()) {
-			return (host->GetSquadID() != 0);
-		}
-	}
-
-	return false;
 }
 
 

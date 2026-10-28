@@ -45,7 +45,7 @@
 #include "ini.h"
 #include "rawfile.h"
 #include "inisup.h"
-#include "natter.h"
+#include "ww3d.h"
 #include "openw3d.h"
 #include "tempfile.h"
 #include "gamesideservercontrol.h"
@@ -63,6 +63,7 @@
 #include "gamemode.h"
 #include <string.h>
 #include <stdio.h>
+#include <winsock2.h>
 
 #define KEY_NUM_SLAVES				"Count"
 #define KEY_SLAVE_NAME				"Name"
@@ -532,7 +533,14 @@ void SlaveMasterClass::Add_Slave(bool enable, const char *nick, const char *seri
  *=============================================================================================*/
 void SlaveMasterClass::Startup_Slaves(void)
 {
-	if (!SlaveMode) {
+	/*
+	** Slaves used to run only in Westwood Online mode, which also gave each one its own port through the WOL
+	** firewall settings. Without that they would all fight over the master's game port, so keep them off until
+	** slaves get a port of their own.
+	*/
+	static constexpr bool SlavesSupported = false;
+
+	if (!SlaveMode && SlavesSupported) {
 
 		/*
 		** Make sure we are a dedicated server.
@@ -544,59 +552,52 @@ void SlaveMasterClass::Startup_Slaves(void)
 			*/
 			if (WW3D::Is_Windowed() || ConsoleBox.Is_Exclusive()) {
 
+				Wait_For_Slave_Shutdown();
+
+				Load();
+				Delete_Registry_Copies();
+				Create_Registry_Copies();
+
 				/*
-				** Slaves only available in internet mode.
+				** Spawn the servers.
 				*/
-				GameModeClass *game_mode = GameModeManager::Find("WOL");
-				if (game_mode && game_mode->Is_Active()) {
+				for (int i=0 ; i<NumSlaveServers ; i++) {
+					if (SlaveServers[i].Enable) {
 
-					Wait_For_Slave_Shutdown();
-
-					Load();
-					Delete_Registry_Copies();
-					Create_Registry_Copies();
-
-					/*
-					** Spawn the servers.
-					*/
-					for (int i=0 ; i<NumSlaveServers ; i++) {
-						if (SlaveServers[i].Enable) {
+						/*
+						** Figure out the name of the .exe to run.
+						*/
+						auto path = cPathUtil::GetExecutableFile().filename();
+						std::vector<const char *> v_args = {
+							{
+								path.string().c_str(),
+								"--multi",
+								"--slave",
+								"--ini", SlaveServers[i].IniPath,
+							}
+						};
+						if (ConsoleBox.Is_Exclusive()) {
+							v_args.push_back("--nodx");
+						}
+						v_args.push_back(nullptr);
+						SlaveServers[i].ProcessInfo = ProcessManager::Create_Process(v_args.data());
+						if (SlaveServers[i].ProcessInfo) {
+							SlaveServers[i].IsRunning = true;
 
 							/*
-							** Figure out the name of the .exe to run.
+							** Set a registry flag to say this server is active. We need to know this if the master server (us)
+							** crashes and restarts.
 							*/
-							auto path = cPathUtil::GetExecutableFile().filename();
-							std::vector<const char *> v_args = {
-								{
-									path.string().c_str(),
-									"--multi",
-									"--slave",
-									"--ini", SlaveServers[i].IniPath,
-								}
-							};
-							if (ConsoleBox.Is_Exclusive()) {
-								v_args.push_back("--nodx");
+							RegistryClass reg(APPLICATION_SUB_KEY_NAME_NET_SLAVE);
+							if (reg.Is_Valid()) {
+								char entry[128];
+								sprintf(entry, "%s%d", KEY_SLAVE_RUNNING_ID, i);
+								reg.Set_Int(entry, SlaveServers[i].ProcessInfo->Get_Pid());
 							}
-							v_args.push_back(nullptr);
-							SlaveServers[i].ProcessInfo = ProcessManager::Create_Process(v_args.data());
-							if (SlaveServers[i].ProcessInfo) {
-								SlaveServers[i].IsRunning = true;
 
-								/*
-								** Set a registry flag to say this server is active. We need to know this if the master server (us)
-								** crashes and restarts.
-								*/
-								RegistryClass reg(APPLICATION_SUB_KEY_NAME_NET_SLAVE);
-								if (reg.Is_Valid()) {
-									char entry[128];
-									sprintf(entry, "%s%d", KEY_SLAVE_RUNNING_ID, i);
-									reg.Set_Int(entry, SlaveServers[i].ProcessInfo->Get_Pid());
-								}
-
-							} else {
-								WWDEBUG_SAY(("Failed to start slave process - error code 0x%lx\n", GetLastError()));
-								SlaveServers[i].IsRunning = false;
-							}
+						} else {
+							WWDEBUG_SAY(("Failed to start slave process - error code 0x%lx\n", GetLastError()));
+							SlaveServers[i].IsRunning = false;
 						}
 					}
 				}
@@ -817,34 +818,6 @@ bool SlaveMasterClass::Create_Registry_Copies(void)
 			*/
 
 			/*
-			** Port numbers.
-			*/
-			{
-				RegistryClass my_reg(APPLICATION_SUB_KEY_NAME_NET_FIREWALL);
-
-				if (SlaveServers[i].Port != 0) {
-					slave_ini.Put_Int(APPLICATION_SUB_KEY_NAME_NET_FIREWALL, "ForcePort", SlaveServers[i].Port);
-				} else {
-					slave_ini.Put_Int(APPLICATION_SUB_KEY_NAME_NET_FIREWALL, "ForcePort", 0);
-
-					int port = my_reg.Get_Int("PortBase", PORT_BASE_MIN);
-					port = port + ((i+1) * 256);
-					if (port >= PORT_BASE_MAX-1) {
-						port -= (PORT_BASE_MAX - PORT_BASE_MIN);
-					}
-					slave_ini.Put_Int(APPLICATION_SUB_KEY_NAME_NET_FIREWALL, "PortBase", port);
-
-					port = my_reg.Get_Int("PortPool", PORT_BASE_MIN);
-					port = port + ((i+1) * 1024);
-					if (port >= PORT_POOL_MAX-1) {
-						port -= (PORT_POOL_MAX - PORT_POOL_MIN);
-					}
-					slave_ini.Put_Int(APPLICATION_SUB_KEY_NAME_NET_FIREWALL, "PortPool", port);
-				}
-			}
-
-
-			/*
 			** Server control info.
 			*/
 			{
@@ -877,22 +850,6 @@ bool SlaveMasterClass::Create_Registry_Copies(void)
 			}
 
 			/*
-			** Login name.
-			*/
-			{
-				slave_ini.Put_String(APPLICATION_SUB_KEY_NAME_WOLSETTINGS, "AutoLogin", SlaveServers[i].NickName);
-				slave_ini.Put_String(APPLICATION_SUB_KEY_NAME_WOLSETTINGS, "LastLogin", SlaveServers[i].NickName);
-			}
-
-			/*
-			** Password name.
-			*/
-			{
-				slave_ini.Put_String(APPLICATION_SUB_KEY_NAME_WOLSETTINGS, "AutoPassword", SlaveServers[i].Password);
-			}
-
-
-			/*
 			** Serial number.
 			*/
 			{
@@ -909,13 +866,7 @@ bool SlaveMasterClass::Create_Registry_Copies(void)
 			*/
 			{
 				slave_ini.Put_Int(APPLICATION_SUB_KEY_NAME_WOLSETTINGS, AutoRestartClass::REG_VALUE_AUTO_RESTART_FLAG, 1);
-
-				int game_type = 0;
-				GameModeClass *game_mode = GameModeManager::Find("WOL");
-				if (game_mode && game_mode->Is_Active()) {
-					game_type = 1;
-				}
-				slave_ini.Put_Int(APPLICATION_SUB_KEY_NAME_WOLSETTINGS, AutoRestartClass::REG_VALUE_AUTO_RESTART_TYPE, game_type);
+				slave_ini.Put_Int(APPLICATION_SUB_KEY_NAME_WOLSETTINGS, AutoRestartClass::REG_VALUE_AUTO_RESTART_TYPE, 0);
 			}
 
 			/*

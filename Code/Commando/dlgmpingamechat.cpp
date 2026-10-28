@@ -48,7 +48,6 @@
 #include "player.h"
 #include "listctrl.h"
 #include "messagewindow.h"
-#include "wolgmode.h"
 #include "translatedb.h"
 #include "string_ids.h"
 
@@ -188,128 +187,14 @@ bool MPChatChildDialogClass::Process_Commands(const unichar_t* message)
 
 		if (command.Get_Length() > 0 && curr_pos[0] != 0) {
 
-			// Kick a player from the game
-			if (command.Compare_No_Case(U_CHAR("kick")) == 0) {
-				GameModeClass* gameMode = GameModeManager::Find("WOL");
-
-				if (gameMode && gameMode->Is_Active()) {
-					// Get the name parameter from the string
-					WideStringClass user_name(64, true);
-					curr_pos = Get_Parameter_From_String(curr_pos, user_name);
-
-					if (user_name.Get_Length() > 0) {
-						WolGameModeClass* wolGame = reinterpret_cast<WolGameModeClass*>(gameMode);
-						wolGame->Kick_Player(user_name);
-					}
-				}
-
-				return true;
-			}
-
-			// Page users outside of this game.
-			if (command.Compare_No_Case(U_CHAR("page")) == 0) {
-				GameModeClass* gameMode = GameModeManager::Find("WOL");
-
-				if (gameMode && gameMode->Is_Active()) {
-					// Get the name parameter from the string
-					WideStringClass user_name(64, true);
-					curr_pos = Get_Parameter_From_String(curr_pos, user_name);
-
-					if (user_name.Get_Length() > 0) {
-						WideStringClass message_str(0, true);
-						message_str = curr_pos;
-						message_str.Trim();
-
-						// If the user is in this game then just send them a private message.
-						cPlayer* recipient = cPlayerManager::Find_Player(user_name);
-
-						if (recipient) {
-							int recipient_id = recipient->Get_Id();
-							Send_Message(message_str, TEXT_MESSAGE_PRIVATE, recipient_id);
-						} else {
-							// Page external users.
-							WolGameModeClass* wolGame = reinterpret_cast<WolGameModeClass*>(gameMode);
-							wolGame->Page_WOL_User(user_name, message_str);
-						}
-					}
-				}
-
-				return true;
-			}
-
-			// Reply to the last page
-			if (command.Compare_No_Case(U_CHAR("r")) == 0) {
-				GameModeClass* gameMode = GameModeManager::Find("WOL");
-
-				if (gameMode && gameMode->Is_Active()) {
-					WolGameModeClass* wolGame = reinterpret_cast<WolGameModeClass*>(gameMode);
-
-					WideStringClass message_str(0, true);
-					message_str = curr_pos;
-					message_str.Trim();
-
-					wolGame->Reply_Last_Page(message_str);
-				}
-
-				return true;
-			}
-
-			// Locate a WOL user
-			if (command.Compare_No_Case(U_CHAR("locate")) == 0) {
-				GameModeClass* gameMode = GameModeManager::Find("WOL");
-
-				if (gameMode && gameMode->Is_Active()) {
-					// Get the name parameter from the string
-					WideStringClass user_name(64, true);
-					curr_pos = Get_Parameter_From_String(curr_pos, user_name);
-
-					if (user_name.Get_Length() > 0) {
-						WolGameModeClass* wolGame = reinterpret_cast<WolGameModeClass*>(gameMode);
-						wolGame->Locate_WOL_User(user_name);
-					}
-				}
-
-				return true;
-			}
-
-			// Invite another WOL user to this game
-			if (command.Compare_No_Case(U_CHAR("invite")) == 0) {
-				GameModeClass* gameMode = GameModeManager::Find("WOL");
-
-				if (gameMode && gameMode->Is_Active()) {
-					// Get the name parameter from the string
-					WideStringClass user_name(64, true);
-					curr_pos = Get_Parameter_From_String(curr_pos, user_name);
-
-					if (user_name.Get_Length() > 0) {
-						WolGameModeClass* wolGame = reinterpret_cast<WolGameModeClass*>(gameMode);
-
-						WideStringClass message_str(0, true);
-						message_str = curr_pos;
-						message_str.Trim();
-
-						wolGame->Invite_WOL_User(user_name, message_str);
-					}
-				}
-
-				return true;
-			}
-
-			// Join another WOL user at their location
-			if (command.Compare_No_Case(U_CHAR("join")) == 0) {
-				GameModeClass* gameMode = GameModeManager::Find("WOL");
-
-				if (gameMode && gameMode->Is_Active()) {
-					// Get the name parameter from the string
-					WideStringClass user_name(64, true);
-					curr_pos = Get_Parameter_From_String(curr_pos, user_name);
-
-					if (user_name.Get_Length() > 0) {
-						WolGameModeClass* wolGame = reinterpret_cast<WolGameModeClass*>(gameMode);
-						wolGame->Join_WOL_User(user_name);
-					}
-				}
-
+			// These commands were only serviced by Westwood Online. Swallow them
+			// so they are not broadcast as chat text.
+			if (command.Compare_No_Case(U_CHAR("kick")) == 0
+				|| command.Compare_No_Case(U_CHAR("page")) == 0
+				|| command.Compare_No_Case(U_CHAR("r")) == 0
+				|| command.Compare_No_Case(U_CHAR("locate")) == 0
+				|| command.Compare_No_Case(U_CHAR("invite")) == 0
+				|| command.Compare_No_Case(U_CHAR("join")) == 0) {
 				return true;
 			}
 		}

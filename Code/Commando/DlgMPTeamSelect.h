@@ -41,16 +41,6 @@
 #include <wwui/menudialog.h>
 #include <wwlib/Notify.h>
 #include <wwlib/Signaler.h>
-#include <WWOnline/RefPtr.h>
-#include "WOLGameInfo.h"
-
-namespace WWOnline
-{
-class Session;
-class ChannelEvent;
-class UserEvent;
-class GameOptionsMessage;
-};
 
 class cPlayer;
 
@@ -59,9 +49,6 @@ typedef TypedEventPair<bool, int> MPChooseTeamSignal;
 class DlgMPTeamSelect :
 		public MenuDialogClass,
 		protected Signaler<MPChooseTeamSignal>,
-		protected Observer<WWOnline::ChannelEvent>,
-		protected Observer<WWOnline::UserEvent>,
-		protected Observer<WWOnline::GameOptionsMessage>,
 		protected Observer<PlayerMgrEvent>
 	{
 	public:
@@ -82,31 +69,18 @@ class DlgMPTeamSelect :
 		void SelectSideChoice(int side);
 		int GetSideChoice(void);
 
-		void RequestWOLGameInfo(void);
-
 		void ShowTimeRemaining(float remainingSecond);
 		bool FindPlayerInListCtrl(const unichar_t* name, ListCtrlClass*& outList, int& outIndex);
 
-		void HandleNotification(WWOnline::ChannelEvent&) override;
-		void HandleNotification(WWOnline::UserEvent&) override;
-		void HandleNotification(WWOnline::GameOptionsMessage&) override;
 		void HandleNotification(PlayerMgrEvent&) override;
-
-		static void ProcessWOLGameInfo(DlgMPTeamSelect& dialog, const char* data);
-		static void ProcessWOLTeamInfo(DlgMPTeamSelect& dialog, const char* data);
-		static void ProcessWOLPlayerInfo(DlgMPTeamSelect& dialog, const char* data);
 
 		void PopulateWithLANPlayers(void);
 		void AddLANPlayerInfo(cPlayer* lanPlayer);
 		void RemoveLANPlayerInfo(cPlayer* lanPlayer);
 
 	protected:
-		bool mWOLGame;
 		bool mCanChoose;
 		float mTimeRemaining;
-
-		RefPtr<WWOnline::Session> mWOLSession;
-		WOLGameInfo mGameInfo;
 	};
 
 #endif // __DLGMPTEAMSELECT_H__

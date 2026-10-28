@@ -48,8 +48,6 @@
 #include "specialbuilds.h"
 #include "_globals.h"
 #include "bandwidth.h"
-#include "mpsettingsmgr.h"
-#include "WWOnline/WOLServer.h"
 #include "useroptions.h"
 #include "gamespyadmin.h"
 #include "servercontrol.h"
@@ -58,6 +56,7 @@
 #include "GameSpy_QnR.h"
 #include "bandwidthcheck.h"
 #include <cstdio>
+#include <winsock2.h>
 
 
 
@@ -66,18 +65,13 @@ const char *MasterServerSection = "Server";
 const char *SlaveServerSection = "Slave";
 
 #define ENCRYPTION_STRING_LENGTH				128
-#define KEY_SLAVE_SERIAL						"Serial"
 
 char ServerSettingsClass::SettingsFile[MAX_PATH];
 bool ServerSettingsClass::IsActive = false;
 char ServerSettingsClass::MasterPassword[128];
 ServerSettingsClass::GameModeTypeEnum ServerSettingsClass::GameMode = MODE_NONE;
 unsigned int ServerSettingsClass::MasterBandwidth = 0;
-char ServerSettingsClass::PreferredLoginServer[256];
 int ServerSettingsClass::DiskLogSize = -1;
-
-const char *ServerListTag = "Available Westwood Servers:";
-const char *ServerListEnd = ";  End generated section.";
 
 
 
@@ -132,15 +126,10 @@ bool ServerSettingsClass::Parse(bool apply)
 	char slave_pass[128];
 	int slave_port;
 	int slave_bw;
-	char master_nick[128];
-	char master_serial[128];
-	int master_port;
 	int master_bw;
-	char master_pass[128];
 	char remote_admin_pass[128];
 	char game_type[32];
 	char heartbeat_list[512];
-	bool wol = true;
 	char remote_admin_ip[128];
 
 	MasterPassword[0] = 0;
@@ -200,10 +189,8 @@ bool ServerSettingsClass::Parse(bool apply)
 			strcpy(game_type, "LAN");
 		}
 		if (stricmp(game_type, "LAN") == 0) {
-			wol = false;
 			GameMode = MODE_LAN;
 		} else if (stricmp(game_type, "GameSpy") == 0) {
-			wol = false;
 			cGameSpyAdmin::Set_Is_Server_Gamespy_Listed(true);
 			GameSpyQnR.Enable_Reporting(true);
 			GameMode = MODE_GAMESPY;
@@ -252,9 +239,6 @@ bool ServerSettingsClass::Parse(bool apply)
 		if (restart_reg.Is_Valid ()) {
 			restart_reg.Set_Int(AutoRestartClass::REG_VALUE_AUTO_RESTART_FLAG, 1);
 			switch (GameMode) {
-				case MODE_WOL:
-					restart_reg.Set_Int(AutoRestartClass::REG_VALUE_AUTO_RESTART_TYPE, 1);
-					break;
 				case MODE_LAN:
 				case MODE_GAMESPY:
 					restart_reg.Set_Int(AutoRestartClass::REG_VALUE_AUTO_RESTART_TYPE, 0);
@@ -262,66 +246,6 @@ bool ServerSettingsClass::Parse(bool apply)
 				case MODE_NONE:
 					break;
 			}
-		}
-
-		/*
-		** Nickname.
-		*/
-		ini.Get_String(MasterServerSection, "Nickname", "", master_nick, sizeof(master_nick));
-#ifdef FREEDEDICATEDSERVER
-		/*
-		** We only need to validate this for the FDS. The regular game can allow the login name to be specified in the registry.
-		*/
-		if (wol && strlen(master_nick) == 0) {
-			WWDEBUG_SAY(("Error - No login nickname specified for master server - aborting\n"));
-			ConsoleBox.Print("Error - No login nickname specified for master server - aborting\n");
-			ConsoleBox.Wait_For_Keypress();;
-			return(false);
-		}
-#endif //FREEDEDICATEDSERVER
-
-		/*
-		** Password.
-		*/
-		ini.Get_String(MasterServerSection, "Password", "", master_pass, sizeof(master_pass));
-#ifdef FREEDEDICATEDSERVER
-		/*
-		** We only need to validate this for the FDS. The regular game can allow the login name to be specified in the registry.
-		*/
-		if (wol && strlen(master_pass) == 0) {
-			WWDEBUG_SAY(("Error - No login password specified for master server - aborting\n"));
-			ConsoleBox.Print("Error - No login password specified for master server - aborting\n");
-			ConsoleBox.Wait_For_Keypress();;
-			return(false);
-		}
-#endif //FREEDEDICATEDSERVER
-
-		/*
-		** Serial number.
-		*/
-		ini.Get_String(MasterServerSection, "Serial", "", master_serial, sizeof(master_serial));
-#ifdef FREEDEDICATEDSERVER
-		/*
-		** We only need to validate the serial number if we are the FDS. For the regular game, the master serial will be stored
-		** in the registry.
-		*/
-		if (wol && strlen(master_serial) == 0) {
-			WWDEBUG_SAY(("Error - No serial number specified for master server - aborting\n"));
-			ConsoleBox.Print("Error - No serial number specified for master server - aborting\n");
-			ConsoleBox.Wait_For_Keypress();;
-			return(false);
-		}
-#endif //FREEDEDICATEDSERVER
-
-		/*
-		** Get the port number.
-		*/
-		master_port = ini.Get_Int(MasterServerSection, "Port", 0xffffffff);
-		if (wol && master_port != 0xffffffff && (master_port < 0 || master_port > 0xffff)) {
-			WWDEBUG_SAY(("Error - Invalid port number %d specified for master server - aborting\n", master_port));
-			ConsoleBox.Print("Error - Invalid port number %d specified for master server - aborting\n", master_port);
-			ConsoleBox.Wait_For_Keypress();
-			return(false);
 		}
 
 		/*
@@ -377,11 +301,6 @@ bool ServerSettingsClass::Parse(bool apply)
 			ConsoleBox.Wait_For_Keypress();;
 			return(false);
 		}
-
-		/*
-		** Get the preferred login server. No preference means use default from ping profile.
-		*/
-		ini.Get_String(MasterServerSection, "LoginServer", "", PreferredLoginServer, sizeof(PreferredLoginServer));
 
 		/*
 		** Get the Network Update Rate override.
@@ -464,47 +383,6 @@ bool ServerSettingsClass::Parse(bool apply)
 		//if (apply) {
 
 			/*
-			** Serial number.
-			*/
-			if (wol) {
-				if (strlen(master_serial)) {
-					StringClass serial(master_serial, true);
-					StringClass encrypted_serial;
-					Encrypt_Serial(serial, encrypted_serial);
-					RegistryClass reg_base(APPLICATION_SUB_KEY_NAME);
-					if (reg_base.Is_Valid()) {
-						reg_base.Set_String(KEY_SLAVE_SERIAL, encrypted_serial.Peek_Buffer());
-					}
-				}
-
-				/*
-				** Nickname.
-				*/
-				if (strlen(master_nick)) {
-					RegistryClass reg_wol(APPLICATION_SUB_KEY_NAME_WOLSETTINGS);
-					if (reg_wol.Is_Valid()) {
-						reg_wol.Set_String("AutoLogin", master_nick);
-						reg_wol.Set_String("LastLogin", master_nick);
-						reg_wol.Set_Int("AutoLoginPrompt", 0);
-						MPSettingsMgrClass::Set_Auto_Login(master_nick);
-					}
-				}
-
-				/*
-				** Password.
-				*/
-				MPSettingsMgrClass::Set_Auto_Password(master_pass);
-
-				/*
-				** Port number.
-				*/
-				if (master_port != 0xffffffff) {
-					RegistryClass reg_fw(APPLICATION_SUB_KEY_NAME_NET_FIREWALL);
-					reg_fw.Set_Int("ForcePort", master_port);
-				}
-			}
-
-			/*
 			** Bandwidth.
 			*/
 			if (master_bw != 0xffffffff) {
@@ -514,22 +392,7 @@ bool ServerSettingsClass::Parse(bool apply)
 						if (master_bw == 0) master_bw = 1000000;
 						cUserOptions::Set_Bandwidth_Bps(master_bw);
 					} else {
-						if (wol) {
-							reg_netopt.Set_Int("BandwidthType", BANDWIDTH_AUTO);
-
-							/*
-							** We want this to be set always on the first time through, but not neccessarily on the second, apply, pass.
-							*/
-							if (master_bw != 0 || !apply) {
-								RegistryClass reg_bw(APPLICATION_SUB_KEY_NAME_BANDTEST);
-								if (reg_bw.Is_Valid()) {
-									reg_bw.Set_Int("Up", master_bw);
-									reg_bw.Set_Int("Down", master_bw);
-								}
-							}
-						} else {
-							cUserOptions::Set_Bandwidth_Type(BANDWIDTH_LANT1);
-						}
+						cUserOptions::Set_Bandwidth_Type(BANDWIDTH_LANT1);
 					}
 				}
 			}
@@ -583,36 +446,15 @@ bool ServerSettingsClass::Parse(bool apply)
 				}
 
 				/*
-				** Make sure there's a nickname and a serial.
+				** Optional slave name and serial.
 				*/
 				ini.Get_String(slave_section, "Nickname", "", slave_nick, sizeof(slave_nick));
-				if (wol && strlen(slave_nick) == 0) {
-					WWDEBUG_SAY(("Error - No login nickname specified for slave %d - aborting\n", i+1));
-					ConsoleBox.Print("Error - No login nickname specified for slave %d - aborting\n", i+1);
-					ConsoleBox.Wait_For_Keypress();;
-					return(false);
-				}
-
 				ini.Get_String(slave_section, "Serial", "", slave_serial, sizeof(slave_serial));
-				if (wol && strlen(slave_serial) == 0) {
-					WWDEBUG_SAY(("Error - No serial number specified for slave %d - aborting\n", i+1));
-					ConsoleBox.Print("Error - No serial number specified for slave %d - aborting\n", i+1);
-					ConsoleBox.Wait_For_Keypress();;
-					return(false);
-				}
 
 				/*
 				** Get the password.
 				*/
 				ini.Get_String(slave_section, "Password", "", slave_pass, sizeof(slave_pass));
-#ifdef FREEDEDICATEDSERVER
-				if (wol && strlen(slave_pass) == 0) {
-					WWDEBUG_SAY(("Error - No login password specified for slave %d - aborting\n", i+1));
-					ConsoleBox.Print("Error - No login password specified for slave %d - aborting\n", i+1);
-					ConsoleBox.Wait_For_Keypress();;
-					return(false);
-				}
-#endif //FREEDEDICATEDSERVER
 
 				/*
 				** Get the port number.
@@ -754,127 +596,6 @@ void ServerSettingsClass::Decrypt_Serial(StringClass serial_in, StringClass &ser
 {
 	Encrypt_Serial(serial_in, serial_out, false);
 }
-
-
-
-/***********************************************************************************************
- * ServerSettingsClass::Get_Preferred_Server -- Get the users specified server                 *
- *                                                                                             *
- *                                                                                             *
- *                                                                                             *
- * INPUT:    Server list from servserv                                                         *
- *                                                                                             *
- * OUTPUT:   Name of preferred server                                                          *
- *                                                                                             *
- * WARNINGS: None                                                                              *
- *                                                                                             *
- * HISTORY:                                                                                    *
- *   2/1/2002 1:18PM ST : Created                                                              *
- *=============================================================================================*/
-char *ServerSettingsClass::Get_Preferred_Server(const WWOnline::IRCServerList &server_list)
-{
-	if (IsActive && server_list.size()) {
-		Write_Server_List(server_list);
-	}
-	return(PreferredLoginServer);
-}
-
-
-
-/***********************************************************************************************
- * ServerSettingsClass::Write_Server_List -- Write the server list into the settings ini file  *
- *                                                                                             *
- *                                                                                             *
- *                                                                                             *
- * INPUT:    Server list                                                                       *
- *                                                                                             *
- * OUTPUT:   Nothing                                                                           *
- *                                                                                             *
- * WARNINGS: None                                                                              *
- *                                                                                             *
- * HISTORY:                                                                                    *
- *   2/1/2002 1:19PM ST : Created                                                              *
- *=============================================================================================*/
-void ServerSettingsClass::Write_Server_List(const WWOnline::IRCServerList &server_list)
-{
-	WWASSERT(server_list.size());
-	WWASSERT(strlen(SettingsFile) != 0);
-
-	char temp[256];
-
-	if (server_list.size()) {
-		RawFileClass file(SettingsFile);
-
-		/*
-		** This is a bit hacky. Basically we just want the .ini file commented with the latest server list.
-		**
-		** We will do this by reading in the file, looking for a tag that tells us where to write the server list, then writing
-		** the file back out with the server list in place.
-		*/
-		if (file.Is_Available()) {
-			unsigned int size = file.Size();
-			if (size) {
-
-				/*
-				** Read the file.
-				*/
-				char *file_buffer = new char[size + 8192];
-#ifdef WWDEBUG
-				unsigned int read_size =
-#endif //WWDEBUG
-				file.Read(file_buffer, size);
-				WWASSERT(read_size == size);
-				file.Close();
-
-				/*
-				** Find the placeholder tag.
-				*/
-				char *tag = strstr(file_buffer, ServerListTag);
-				char *end_tag = strstr(file_buffer, ServerListEnd);
-				if (tag && end_tag) {
-
-					/*
-					** Write out the first portion of the file unchanged.
-					*/
-					file.Open(FileClass::WRITE);
-					const ptrdiff_t prefix_len = tag - file_buffer;
-					WWASSERT(prefix_len >= 0 && prefix_len <= std::numeric_limits<int>::max());
-					const size_t tag_len = ::strlen(ServerListTag);
-					WWASSERT(tag_len <= static_cast<size_t>(std::numeric_limits<int>::max()));
-					file.Write(file_buffer, static_cast<int>(prefix_len + static_cast<ptrdiff_t>(tag_len)));
-
-					/*
-					** Insert the server list.
-					*/
-					char *server_list_text = new char [8192];
-					strcpy(server_list_text, "\r\n;\r\n");
-
-					for (size_t i = 0; i < server_list.size(); i++)	{
-						const RefPtr<WWOnline::IRCServerData> &server = server_list[i];
-						if (server->HasLanguageCode()) {
-							const char *server_name = server->GetName();
-							sprintf(temp, ";    %s\r\n", server_name);
-							strcat(server_list_text, temp);
-						}
-					}
-					strcat(server_list_text, ";\r\n");
-					const size_t list_len = ::strlen(server_list_text);
-					WWASSERT(list_len <= static_cast<size_t>(std::numeric_limits<int>::max()));
-					file.Write(server_list_text, static_cast<int>(list_len));
-
-					/*
-					** Write out the post server list sections of the original file.
-					*/
-					const ptrdiff_t suffix_len = (file_buffer + size) - end_tag;
-					WWASSERT(suffix_len >= 0 && suffix_len <= std::numeric_limits<int>::max());
-					file.Write(end_tag, static_cast<int>(suffix_len));
-					file.Close();
-				}
-			}
-		}
-	}
-}
-
 
 
 

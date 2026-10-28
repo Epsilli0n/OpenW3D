@@ -73,14 +73,11 @@
 #include "useroptions.h"
 #include "gdsingleplayer.h"
 #include "gdcnc.h"
-#include "wolgmode.h"
 #include "font3d.h"
-#include "nat.h"
 #include "csdamageevent.h"
 #include "sctextobj.h"
 #include "widestring.h"
 #include "vehicle.h"
-#include "WOLGameInfo.h"
 #include "spawn.h"
 #include "dlgcncwinscreen.h"
 #include "dialogmgr.h"
@@ -97,6 +94,7 @@
 #include "specialbuilds.h"
 #include "demosupport.h"
 #include "specialbuilds.h"
+#include <winsock2.h>
 
 const int cGameData::MAX_TIME_LIMIT       = 999;
 
@@ -503,20 +501,6 @@ void cGameData::Set_Ip_And_Port(void)
 		ip = g_ip_override;
 	}
 
-	//
-	// IP is set automatically in WOL unless there is an IP override and a port overrride.
-	//
-	if (GameModeManager::Find("WOL")->Is_Active()) {
-
-		if (g_ip_override == INADDR_NONE || WOLNATInterface.Get_Force_Port() == 0) {
-			unsigned int temp = FirewallHelper.Get_Local_Address();
-			if (temp) {
-				//ip = temp;
-				ip = ::ntohl(temp);
-			}
-		}
-	}
-
 	//WWASSERT(ip != 0);
 	Set_Ip_Address(ip);
 }
@@ -675,9 +659,8 @@ bool cGameData::Is_Valid_Settings(WideStringClass& outMsg, bool check_as_server)
 		return false;
 	}
 
-#ifndef FREEDEDICATEDSERVER
-	if (GameModeManager::Find("WOL")->Is_Active()) {
-#endif //FREEDEDICATEDSERVER
+#ifdef FREEDEDICATEDSERVER
+	{
 		if (IsPassworded.Is_True() && Is_QuickMatch_Server()) {
 			Debug_Say(("cGameData::Is_Valid_Settings: Quickmatch can not have passwords.\n" ));
 			PRINT_CONFIG_ERROR;
@@ -715,16 +698,10 @@ bool cGameData::Is_Valid_Settings(WideStringClass& outMsg, bool check_as_server)
 			outMsg = "Team changing or Team Remix not allowed on a clan game server."; //TRANSLATE(IDS_HOPTERR_NO_TEAMCHANGE);
 			return false;
 		}
-#ifndef FREEDEDICATEDSERVER
 	}
 #endif //FREEDEDICATEDSERVER
 
-#ifdef FREEDEDICATEDSERVER
-	if (Get_Max_Players() == 0 && ServerSettingsClass::Get_Game_Mode() !=
-		ServerSettingsClass::MODE_WOL) {
-#else
 	if (Get_Max_Players() == 0) {
-#endif
 		PRINT_CONFIG_ERROR;
 		ConsoleBox.Print("Max player count must be greater than 0\n\n");
 		outMsg = TRANSLATE(IDS_HOPTERR_MAXPLAYER_0);
@@ -914,40 +891,6 @@ bool cGameData::Does_Map_Exist (void)
 	}
 
 	return retval;
-}
-
-
-//-----------------------------------------------------------------------------
-void cGameData::Import_Tier_1_Data(const WOLGameInfo& gameInfo)
-{
-	Set_Map_Name(gameInfo.MapName());
-	Set_Mod_Name(gameInfo.ModName());
-
-	WideStringClass title(0, true);
-	title.Convert_From(gameInfo.Title());
-	Set_Game_Title(title);
-
-	Set_Max_Players(gameInfo.MaxPlayers());
-	Set_Current_Players(gameInfo.NumPlayers());
-
-	// Set game flags
-	IsDedicated.Set(gameInfo.IsDedicated());
-	IsPassworded.Set(gameInfo.IsPassworded());
-	IsLaddered.Set(gameInfo.IsLaddered());
-	IsFriendlyFirePermitted.Set(gameInfo.IsFriendlyFire());
-	IsFreeWeapons.Set(gameInfo.IsFreeWeapons());
-	RemixTeams.Set(gameInfo.IsTeamRemix());
-	IsTeamChangingAllowed.Set(gameInfo.IsTeamChange());
-	IsClanGame.Set(gameInfo.IsClanGame());
-	IsQuickMatchServer = gameInfo.IsQuickmatch();
-
-	CanRepairBuildings.Set(gameInfo.IsRepairBuildings());
-	DriverIsAlwaysGunner.Set(gameInfo.IsDriverGunner());
-	SpawnWeapons.Set(gameInfo.IsSpawnWeapons());
-
-	Clear_Clans();
-	mClanSlots[0] = gameInfo.ClanID1();
-	mClanSlots[1] = gameInfo.ClanID2();
 }
 
 
@@ -1233,15 +1176,6 @@ void cGameData::Soldier_Added(SoldierGameObj * p_soldier)
 //-----------------------------------------------------------------------------
 void cGameData::Begin_Intermission(void)
 {
-	// If we are transitioning from one game to another we must first end the
-	// previous game.
-	GameModeClass* gameMode = GameModeManager::Find("WOL");
-
-	if (gameMode && gameMode->Is_Active()) {
-		WolGameModeClass* wolGame = reinterpret_cast<WolGameModeClass*>(gameMode);
-		wolGame->End_Game();
-	}
-
 	IsIntermission.Set(true);
    IntermissionTimeRemaining = float(Get_Intermission_Time_Seconds());
 
@@ -2081,27 +2015,12 @@ void cGameData::On_Game_Begin(void)
 			Rebalance_Team_Sides();
 		}
 	}
-
-	GameModeClass* gameMode = GameModeManager::Find("WOL");
-
-	if (gameMode && gameMode->Is_Active()) {
-		WolGameModeClass* wolGame = reinterpret_cast<WolGameModeClass*>(gameMode);
-		WWASSERT(wolGame != nullptr);
-		wolGame->Start_Game(this);
-	}
 }
 
 //-----------------------------------------------------------------------------
 void cGameData::On_Game_End(void)
 {
    WWDEBUG_SAY(("cGameData::On_Game_End\n"));
-
-	GameModeClass* gameMode = GameModeManager::Find("WOL");
-
-	if (gameMode && gameMode->Is_Active()) {
-		WolGameModeClass* wolGame = reinterpret_cast<WolGameModeClass*>(gameMode);
-		wolGame->End_Game();
-	}
 }
 
 //-----------------------------------------------------------------------------

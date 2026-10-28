@@ -46,15 +46,12 @@
 #include "childdialog.h"
 #include "renegadedialog.h"
 #include <wwlib/vector.h>
-#include <wwlib/Signaler.h>
 
 
 ////////////////////////////////////////////////////////////////
 //	Forward declarations
 ////////////////////////////////////////////////////////////////
 class cGameData;
-class WolGameModeClass;
-class DlgMsgBoxEvent;
 class ModPackageClass;
 class MPLanHostMapCycleOptionsTabClass;
 
@@ -64,9 +61,7 @@ class MPLanHostMapCycleOptionsTabClass;
 //	MPLanHostOptionsMenuClass
 //
 ////////////////////////////////////////////////////////////////
-class MPLanHostOptionsMenuClass :
-	public MenuDialogClass,
-	protected Signaler<WolGameModeClass>
+class MPLanHostOptionsMenuClass : public MenuDialogClass
 {
 public:
 
@@ -80,7 +75,6 @@ public:
 	//	Public methods
 	////////////////////////////////////////////////////////////////
 	void		On_Init_Dialog (void) override;
-	void		On_Periodic(void) override;
 	void		On_Command (int ctrl_id, int mesage_id, unsigned int param) override;
 
 	void		Enable_Mod_Selection (bool onoff);
@@ -90,14 +84,11 @@ private:
 	////////////////////////////////////////////////////////////////
 	//	Private methods
 	////////////////////////////////////////////////////////////////
-	void ReceiveSignal(WolGameModeClass&) override;
 	void Start_Game(cGameData* theGame);
 
 	////////////////////////////////////////////////////////////////
 	//	Private member data
 	////////////////////////////////////////////////////////////////
-	bool											mStartTheGame;
-	unsigned int								mClanID;
 	MPLanHostMapCycleOptionsTabClass *	MapCycleDialog;
 };
 
@@ -108,18 +99,14 @@ private:
 //	MPLanHostBasicOptionsTabClass
 //
 ////////////////////////////////////////////////////////////////
-class MPLanHostBasicOptionsTabClass :
-	public ChildDialogClass,
-	public Signaler<bool>
+class MPLanHostBasicOptionsTabClass : public ChildDialogClass
 {
 public:
-	static MPLanHostBasicOptionsTabClass* Get_Instance(void);
 
 	////////////////////////////////////////////////////////////////
 	//	Public constructors/destructors
 	////////////////////////////////////////////////////////////////
 	MPLanHostBasicOptionsTabClass (void);
-	~MPLanHostBasicOptionsTabClass (void);
 
 	////////////////////////////////////////////////////////////////
 	//	Public methods
@@ -136,7 +123,6 @@ private:
 	////////////////////////////////////////////////////////////////
 	//	Private member data
 	////////////////////////////////////////////////////////////////
-	static MPLanHostBasicOptionsTabClass* _mInstance;
 	static int BandTestMaxPlayers;
 };
 
@@ -147,10 +133,7 @@ private:
 //	MPLanHostAdvancedOptionsTabClass
 //
 ////////////////////////////////////////////////////////////////
-class MPLanHostAdvancedOptionsTabClass :
-	public ChildDialogClass,
-	public Observer<DlgMsgBoxEvent>,
-	protected Signaler<bool>
+class MPLanHostAdvancedOptionsTabClass : public ChildDialogClass
 {
 public:
 
@@ -165,25 +148,6 @@ public:
 	void		On_Init_Dialog (void) override;
 	bool		On_Apply (void) override;
 	void		On_Command (int ctrl_id, int message_id, unsigned int param) override;
-	void		HandleNotification(DlgMsgBoxEvent&) override;
-
-protected:
-	void ReceiveSignal(bool&) override;
-	void ConfigureWOLControls(void);
-	bool IsHostAClanMember(void) const;
-
-private:
-	bool mIsWOLGame;
-	bool mPassword;
-	bool mChangeTeams;
-	bool mRemixTeams;
-	bool mLaddered;
-	bool mClanGame;
-	bool mQuickmatch;
-
-	////////////////////////////////////////////////////////////////
-	//	Private member data
-	////////////////////////////////////////////////////////////////
 };
 
 

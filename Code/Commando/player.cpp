@@ -568,18 +568,6 @@ void cPlayer::Get_Player_String(int /* rank */, WideStringClass & string, bool f
       string += substring;
 	}
 
-   //
-	// WOL rank
-	//
-   if (GameModeManager::Find("WOL")->Is_Active() && is_verbose) {
-      if ((int)WolRank == -1) {
-         substring.Format(U_CHAR("%-8s"), U_CHAR(" -"));
-      } else {
-         substring.Format(U_CHAR("%-8d"), (int)WolRank);
-      }
-      string += substring;
-   }
-
 #ifdef WWDEBUG
    //
    // Ping

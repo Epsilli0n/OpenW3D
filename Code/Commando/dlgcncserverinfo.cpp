@@ -52,8 +52,6 @@
 #include "building.h"
 #include "damage.h"
 #include "vehicle.h"
-#include "wolgmode.h"
-#include <WWOnline/WOLUser.h>
 #include "translatedb.h"
 #include "string_ids.h"
 #include "mousemgr.h"

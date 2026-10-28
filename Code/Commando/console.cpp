@@ -62,7 +62,6 @@
 #include "_globals.h"
 #include "registry.h"
 #include "phys3.h"
-#include "wolgmode.h"
 #include "devoptions.h"
 #include "playertype.h"
 #include "pscene.h"
@@ -88,7 +87,6 @@
 #include "trackedvehicle.h"
 #include "dx8rendererdebugger.h"
 #include "FastAllocator.h"
-#include <WWOnline/WOLSession.h>
 #include "ConsoleMode.h"
 
 //#include "dlgmpingamechat.h"
@@ -203,8 +201,6 @@ void 	ConsoleGameModeClass::Think()
 		ConsoleFunctionManager::Next_Verbose_Help_Screen();
 	}
 	*/
-
-	//cNetwork::Watch_Wol_Location(Drawer, Font);
 
    if ( !InputActive ) {
       bool enable_console = false;
@@ -1140,26 +1136,6 @@ WWPROFILE( "Input Active" );
 
 			StatisticsDisplayManager::Set_Stat( "ai", message );
 		}
-
-#ifdef WWDEBUG
-   	/*
-		** WOL location diagnostic
-		*/
-#if(0) // obsolete
-		if (StatisticsDisplayManager::Is_Current_Display("wol")) {
-			char string[200];
-      	if (GameModeManager::Find("WOL")->Is_Active()) {
-         	WWASSERT(PWC != nullptr);
-	      	//sprintf(string, "WOL location: %s", PWC->Translate_Location());
-	      	sprintf(string, "WOL location: %s", Translate_Location(PWC->Get_Current_Location()));
-      	} else {
-	      	sprintf(string, "WOL is not active.");
-      	}
-
-			StatisticsDisplayManager::Set_Stat( "wol", string );
-		}
-#endif // obsolete
-#endif // WWDEBUG
 	}
 
    if ( Input::Get_State( INPUT_FUNCTION_CNC )) {
@@ -1198,12 +1174,6 @@ void 	ConsoleGameModeClass::Parse_Input( char * string )
 				}
 			}
 			*/
-      } else if (GameModeManager::Find("WOL")->Is_Active()) {
-				RefPtr<WWOnline::Session> wolSession = WWOnline::Session::GetInstance(false);
-
-				if (wolSession.IsValid()) {
-					wolSession->SendPublicMessage(string);
-				}
       }
 	} else {
 		ConsoleFunctionManager::Parse_Input( string );

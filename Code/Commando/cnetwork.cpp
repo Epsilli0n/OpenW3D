@@ -43,7 +43,6 @@
 #include "specialbuilds.h"
 
 #include "langmode.h"
-#include "wolgmode.h"
 #include "playermanager.h"
 #include "textdisplay.h"
 #include "gameobjmanager.h"
@@ -68,7 +67,6 @@
 #include "sbbomanager.h"
 #include "clientgoodbyeevent.h"
 //#include "helptext.h"
-#include	"natter.h"
 #include	"vistable.h"
 #include "gameinitmgr.h"
 #include "DlgMessageBox.h"
@@ -183,7 +181,6 @@ void cNetwork::Init_Client([[maybe_unused]] unsigned short my_port)
 
 		HaveDoneTeamChangeDialog = false;
 	} else {
-		//WWASSERT(GameModeManager::Find("WOL")->Is_Active());
 		bbo = cBandwidth::Get_Bandwidth_Bps_From_Type((BANDWIDTH_TYPE_ENUM)cUserOptions::Get_Bandwidth_Type());
 		//bbo = cUserOptions::BandwidthBps.Get();
 		WWASSERT(bbo > 0);
@@ -191,10 +188,6 @@ void cNetwork::Init_Client([[maybe_unused]] unsigned short my_port)
 		int bw_scale = (bbo * 2) / 10;
 		bw_scale = (bw_scale / 1000) * 1000;
 		cBandwidthGraph::Set_Scale(bw_scale);
-
-		if (GameModeManager::Find("WOL")->Is_Active()) {
-			HaveDoneTeamChangeDialog = true;
-		}
 	}
 
 	PClientConnection->Set_Bandwidth_Budget_Out(bbo);
@@ -309,14 +302,6 @@ void cNetwork::Accept_Handler(void)
    if (!I_Am_Server()) {
       if (GameModeManager::Find("LAN")->Is_Active()) {
          PLC->Accept_Actions();
-      } else {
-			 GameModeClass* gameMode = GameModeManager::Find("WOL");
-
-			 if (gameMode && gameMode->Is_Active()) {
-				 WolGameModeClass* wolGame = static_cast<WolGameModeClass*>(gameMode);
-				 WWASSERT(wolGame);
-				 wolGame->Accept_Actions();
-			 }
       }
    }
 
@@ -346,14 +331,6 @@ void cNetwork::Refusal_Handler([[maybe_unused]] REFUSAL_CODE refusal_code)
 
    if (GameModeManager::Find("LAN")->Is_Active()) {
       PLC->Refusal_Actions();
-   } else {
-		 GameModeClass* gameMode = GameModeManager::Find("WOL");
-
-		 if (gameMode && gameMode->Is_Active()) {
-			 WolGameModeClass* wolGame = static_cast<WolGameModeClass*>(gameMode);
-			 WWASSERT(wolGame);
-			 wolGame->Refusal_Actions();
-		 }
    }
 
    //
@@ -658,7 +635,6 @@ void cNetwork::Init_Server(void)
 		PServerConnection->Set_Bandwidth_Budget_Out(bbo);
 		cBandwidthGraph::Set_Scale(200000);
 	} else {
-		//WWASSERT(GameModeManager::Find("WOL")->Is_Active());
 		WWASSERT(cUserOptions::BandwidthBps.Get() > 0);
 		unsigned int bw = cBandwidth::Get_Bandwidth_Bps_From_Type((BANDWIDTH_TYPE_ENUM)cUserOptions::Get_Bandwidth_Type());
 

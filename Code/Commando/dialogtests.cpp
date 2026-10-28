@@ -64,7 +64,6 @@
 #include "gamechannel.h"
 #include "gamechanlist.h"
 #include "gamemode.h"
-#include "wolgmode.h"
 #include "langmode.h"
 #include "dlgcontrolslisttab.h"
 #include "campaign.h"
@@ -85,7 +84,6 @@
 #include "dlgmplanhostoptions.h"
 #include "shellapi.h"
 #include "gamespyadmin.h"
-#include "dlgmpwolmain.h"
 #include "specialbuilds.h"
 #include "GameSpy_QnR.h"
 #include <wwui/imagectrl.h>
@@ -423,7 +421,7 @@ GameSpyMainDialogClass::On_Last_Menu_Ending (void)
 /******************************************************************************
 *
 * NAME
-*     DlgWOLSettings::HandleNotification(DlgWOLWaitEvent)
+*     GameSpyMainDialogClass::HandleNotification(DlgWOLWaitEvent)
 *
 * DESCRIPTION
 *
@@ -757,10 +755,6 @@ InternetMainDialogClass::On_Last_Menu_Ending (void)
 void
 InternetMainDialogClass::On_Init_Dialog (void)
 {
-#ifdef MULTIPLAYERDEMO
-	Get_Dlg_Item(IDC_MENU_MP_INTERNET_WOL)->Enable(false);
-#endif // MULTIPLAYERDEMO
-
 #ifdef BETACLIENT
 	Get_Dlg_Item(IDC_MENU_MP_INTERNET_GAMESPY)->Enable(false);
 #endif // BETACLIENT
@@ -779,13 +773,6 @@ InternetMainDialogClass::On_Command (int ctrl_id, int mesage_id, unsigned int pa
 {
 	switch (ctrl_id)
 	{
-		case IDC_MENU_MP_INTERNET_WOL:
-		{
-			GameInitMgrClass::Initialize_WOL ();
-			START_DIALOG (MPWolMainMenuClass);
-			break;
-		}
-
 		case IDC_MENU_MP_INTERNET_GAMESPY:
 		{
 			START_DIALOG (GameSpyMainDialogClass);
@@ -1194,14 +1181,6 @@ MPServerStartMenuClass::On_Command (int ctrl_id, int message_id, unsigned int pa
 void
 MPJoinMenuClass::On_Init_Dialog (void)
 {
-#if(1)
-	assert(!"NEW_WWONLINE: Denzil look here!");
-#else
-	if (WolGameModeClass::PWolChat != nullptr) {
-		WolGameModeClass::PWolChat->Go_To_GameList ();
-	}
-#endif
-
 	//
 	//	Get a pointer to the list control
 	//
@@ -1305,17 +1284,6 @@ MPJoinMenuClass::Update_Game_List (void)
 	//
 	list_ctrl->Delete_All_Entries ();
 
-#if(1)
-	assert(!"NEW_WWONLINE: Denzil look here!");
-#else
-	//
-	//	Update the channel list
-	//
-	if (GameModeManager::Find("WOL")->Is_Active()) {
-		WolGameModeClass::PWolChat->My_Request_Channel_List(true);
-	}
-#endif
-
 	//
 	//	Build the game list
 	//
@@ -1324,11 +1292,6 @@ MPJoinMenuClass::Update_Game_List (void)
 	for (objnode = cGameChannelList::Get_Chan_List()->Head(); objnode; objnode = objnode->Next()) {
 		cGameChannel * p_channel = objnode->Data();
 		WWASSERT(p_channel != nullptr);
-
-	   if (GameModeManager::Find("WOL")->Is_Active()) {
-			WWASSERT(p_channel->Get_Wol_Channel() != nullptr);
-			p_channel->Get_Game_Data()->Set_Current_Players(p_channel->Get_Wol_Channel()->currentUsers);
-		}
 
 		int player_count		= p_channel->Get_Game_Data()->Get_Current_Players ();
 		int player_count_max = p_channel->Get_Game_Data()->Get_Max_Players ();

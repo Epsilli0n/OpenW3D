@@ -45,7 +45,6 @@
 #include "menubackdrop.h"
 #include "listctrl.h"
 #include "gamemode.h"
-#include "wolgmode.h"
 #include "translatedb.h"
 #include "string_ids.h"
 #include "cnetwork.h"
@@ -72,7 +71,6 @@ enum
 	COL_NAME,
 	COL_SCORE,
 	COL_KILLS,
-	COL_LADDER,
 };
 
 
@@ -84,7 +82,6 @@ enum
 CNCWinScreenMenuClass::CNCWinScreenMenuClass (void)	:
 	HeaderModel (nullptr),
 	UpdateTimer (UpdateIntervalS),
-	ShowLadderPoints(false),
 	MenuDialogClass (GetRenegadeDialog(RenegadeDialogID::IDD_CNC_WINSCREEN))
 {
 	//
@@ -102,15 +99,6 @@ CNCWinScreenMenuClass::CNCWinScreenMenuClass (void)	:
 		HeaderModel = WW3DAssetManager::Get_Instance ()->Create_Render_Obj ("HUD_GDIWINBAN");
 	} else {
 		HeaderModel = WW3DAssetManager::Get_Instance ()->Create_Render_Obj ("HUD_NODWINBAN");
-	}
-
-	//
-	// Should we show ladder points?
-	//
-	WWASSERT(GameModeManager::Find("WOL") != nullptr);
-	WWASSERT(The_Game() != nullptr);
-	if (GameModeManager::Find("WOL")->Is_Active() && The_Game()->IsLaddered.Is_True()) {
-		ShowLadderPoints = true;
 	}
 
 	_TheInstance = this;
@@ -156,9 +144,6 @@ CNCWinScreenMenuClass::On_Init_Dialog (void)
 		list_ctrl->Add_Column (TRANSLATE (IDS_MENU_NAME),		0.3F,		Vector3 (1, 1, 1));
 		list_ctrl->Add_Column (TRANSLATE (IDS_MENU_SCORE),		0.2F,		Vector3 (1, 1, 1));
 		list_ctrl->Add_Column (TRANSLATE (IDS_MENU_KILLS),		0.15F,	Vector3 (1, 1, 1));
-		if (ShowLadderPoints) {
-			list_ctrl->Add_Column (TRANSLATE (IDS_MENU_LADDER),	0.25F,	Vector3 (1, 1, 1));
-		}
 	}
 
 	list_ctrl = (ListCtrlClass *)Get_Dlg_Item (IDC_LOSE1_LIST_CTRL);
@@ -171,9 +156,6 @@ CNCWinScreenMenuClass::On_Init_Dialog (void)
 		list_ctrl->Add_Column (TRANSLATE (IDS_MENU_NAME),		0.3F,		Vector3 (1, 1, 1));
 		list_ctrl->Add_Column (TRANSLATE (IDS_MENU_SCORE),		0.2F,		Vector3 (1, 1, 1));
 		list_ctrl->Add_Column (TRANSLATE (IDS_MENU_KILLS),		0.15F,	Vector3 (1, 1, 1));
-		if (ShowLadderPoints) {
-			list_ctrl->Add_Column (TRANSLATE (IDS_MENU_LADDER),	0.25F,	Vector3 (1, 1, 1));
-		}
 	}
 
 	//
@@ -579,9 +561,6 @@ CNCWinScreenMenuClass::Populate_Player_Lists (int team_id, int list_ctrl1_id)
 			list_ctrl->Set_Entry_Int (item_index, COL_RANK,			player->Get_Rung ());
 			list_ctrl->Set_Entry_Int (item_index, COL_SCORE,		int(player->Get_Score ()));
 			list_ctrl->Set_Entry_Int (item_index, COL_KILLS,		player->Get_Kills ());
-			if (ShowLadderPoints) {
-				list_ctrl->Set_Entry_Int (item_index, COL_LADDER,		player->Get_Ladder_Points ());
-			}
 
 			//
 			//	Put a star by the player's name if this is the local player
@@ -593,9 +572,6 @@ CNCWinScreenMenuClass::Populate_Player_Lists (int team_id, int list_ctrl1_id)
 				list_ctrl->Set_Entry_Color (item_index, COL_NAME,		Vector3 (1.0F, 1.0F, 1.0F));
 				list_ctrl->Set_Entry_Color (item_index, COL_SCORE,		Vector3 (1.0F, 1.0F, 1.0F));
 				list_ctrl->Set_Entry_Color (item_index, COL_KILLS,		Vector3 (1.0F, 1.0F, 1.0F));
-				if (ShowLadderPoints) {
-					list_ctrl->Set_Entry_Color (item_index, COL_LADDER,	Vector3 (1.0F, 1.0F, 1.0F));
-				}
 			}
 
 			//
@@ -643,29 +619,5 @@ CNCWinScreenMenuClass::ListSortCallback
 void
 CNCWinScreenMenuClass::Build_Player_Display_Name (const cPlayer *player, WideStringClass &outName)
 {
-// Denzil 02/24/02 Day 1 Patch - Do not show clan abbreviation for now because
-// it does not always fit in the space alloted. For now it is better not to
-// show it than to have it chopped off.
-#if(0)
-	GameModeClass* gameMode = GameModeManager::Find("WOL");
-
-	if (gameMode && gameMode->Is_Active()) {
-		WolGameModeClass* wolGame = static_cast<WolGameModeClass*>(gameMode);
-		WWASSERT(wolGame);
-
-		RefPtr<WWOnline::UserData> user = wolGame->Get_WOL_User_Data(player->Get_Name());
-
-		if (user.IsValid()) {
-			// Set there clan information
-			RefPtr<WWOnline::SquadData> clan = user->GetSquad();
-
-			if (clan.IsValid()) {
-				outName.Format(U_CHAR("%s [%S]"), player->Get_Name(), clan->GetAbbr());
-				return;
-			}
-		}
-	}
-#endif
-
 	outName = player->Get_Name();
 }

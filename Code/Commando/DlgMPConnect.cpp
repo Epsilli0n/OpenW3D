@@ -48,7 +48,6 @@
 #include "dialogmgr.h"
 #include "gamemode.h"
 #include "langmode.h"
-#include "wolgmode.h"
 
 /******************************************************************************
 *
@@ -276,17 +275,6 @@ void DlgMPConnect::On_Periodic(void)
 				{
       		PLC->Refusal_Actions();
    			}
-			else
-				{
-		 		GameModeClass* gameMode = GameModeManager::Find("WOL");
-
-		 		if (gameMode && gameMode->Is_Active())
-					{
-			 		WolGameModeClass* wolGame = static_cast<WolGameModeClass*>(gameMode);
-			 		WWASSERT(wolGame);
-			 		wolGame->Refusal_Actions();
-		 			}
-				}
 
 			Release_Ref();
 			}

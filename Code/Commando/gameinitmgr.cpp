@@ -45,7 +45,6 @@
 #include "renegadedialogmgr.h"
 #include "netinterface.h"
 #include "langmode.h"
-#include "wolgmode.h"
 #include "playermanager.h"
 #include "WWAudio.h"
 #include "saveloadstatus.h"
@@ -66,7 +65,6 @@
 #include "bioevent.h"
 #include "devoptions.h"
 #include "svrgoodbyeevent.h"
-#include	"natter.h"
 #include "apppacketstats.h"
 #include "packetmgr.h"
 #include "AutoStart.h"
@@ -110,7 +108,6 @@ bool		GameInitMgrClass::RestoreMusic		= false;
 bool		GameInitMgrClass::NeedsGameExit		= false;
 bool		GameInitMgrClass::NeedsGameExitAll	= false;
 int		GameInitMgrClass::Mode					= MODE_UNKNOWN;
-int		GameInitMgrClass::WOLReturnDialog	= RenegadeDialogMgrClass::LOC_INTERNET_MAIN;
 
 
 bool GameInitMgrClass::Is_Game_In_Progress(void)
@@ -227,13 +224,11 @@ GameInitMgrClass::Start_Game (const char *map_name, int teamChoice, unsigned int
 	game_mode->Load_Level ();
 
    //
-	//	Let the LAN or WOL interface know we are starting a game
+	//	Let the LAN interface know we are starting a game
 	//
 	if (Mode == MODE_LAN) {
 		INIT_STATUS ("Go to location");
 		PLC->Go_To_Location (LANLOC_INGAME);
-	} else if (Mode == MODE_WOL) {
-		INIT_STATUS ("Go to game channel");
 	}
 
 	//
@@ -380,15 +375,6 @@ GameInitMgrClass::End_Game (void)
 		GameModeManager::Find ("Menu")->Deactivate ();
 	}
 
-	// Leave the WWOnline game.
-	GameModeClass* gameMode = GameModeManager::Find("WOL");
-
-	if (gameMode && gameMode->Is_Active()) {
-		WolGameModeClass* wolGame = static_cast<WolGameModeClass*>(gameMode);
-		WWASSERT(wolGame != nullptr);
-		wolGame->Leave_Game();
-	}
-
 	if (cNetwork::I_Am_Server()) {
 
 		bool is_quick_full_exit_requested = false;
@@ -487,13 +473,6 @@ GameInitMgrClass::Display_End_Game_Menu (void)
 				RenegadeDialogMgrClass::Goto_Location (RenegadeDialogMgrClass::LOC_LAN_MAIN);
 			}
 			break;
-
-		//
-		//	Display the WOL main menu
-		//
-		case MODE_WOL:
-			RenegadeDialogMgrClass::Goto_Location ((RenegadeDialogMgrClass::LOCATION)WOLReturnDialog);
-			break;
 	}
 
 	return ;
@@ -543,27 +522,17 @@ GameInitMgrClass::Start_Client_Server (void)
 {
    WWDEBUG_SAY (("GameInitMgrClass::Start_Client_Server\n"));
 
-	assert(GameModeManager::Find("WOL"));
-		if (GameModeManager::Find("WOL")->Is_Active()) {
-			if (PTheGameData != nullptr) {
-				const unsigned short wol_port = WOLNATInterface.Get_Port_As_Server();
-				if (wol_port >= MIN_SERVER_PORT && wol_port <= MAX_SERVER_PORT) {
-					The_Game()->Set_Port(wol_port);
+	if (GameModeManager::Find("LAN")->Is_Active() && cGameSpyAdmin::Is_Gamespy_Game()) {
+		if (PTheGameData != nullptr) {
+			const int gamespy_port = cUserOptions::GameSpyGamePort.Get();
+			if (gamespy_port >= MIN_SERVER_PORT && gamespy_port <= MAX_SERVER_PORT) {
+				The_Game()->Set_Port(gamespy_port);
+				ConsoleBox.Print("GameSpy server port set to %d\n", gamespy_port);
 			} else {
-				WWDEBUG_SAY(("WOL port %hu outside valid range, keeping existing game port\n", wol_port));
+				WWDEBUG_SAY(("GameSpy port %d outside valid range, keeping existing game port\n", gamespy_port));
 			}
 		}
-		} else if (GameModeManager::Find("LAN")->Is_Active() && cGameSpyAdmin::Is_Gamespy_Game()) {
-			if (PTheGameData != nullptr) {
-				const int gamespy_port = cUserOptions::GameSpyGamePort.Get();
-				if (gamespy_port >= MIN_SERVER_PORT && gamespy_port <= MAX_SERVER_PORT) {
-					The_Game()->Set_Port(gamespy_port);
-					ConsoleBox.Print("GameSpy server port set to %d\n", gamespy_port);
-				} else {
-					WWDEBUG_SAY(("GameSpy port %d outside valid range, keeping existing game port\n", gamespy_port));
-				}
-			}
-		}
+	}
 
 #ifdef WWDEBUG
 	cRemoteHost::Set_Allow_Extra_Modem_Bandwidth_Throttling(cDevOptions::ExtraModemBandwidthThrottling.Get());
@@ -602,18 +571,7 @@ GameInitMgrClass::Start_Client_Server (void)
 			PacketManager.Set_Is_Server(false);
 		}
 
-		assert(GameModeManager::Find("WOL"));
-		if (GameModeManager::Find("WOL")->Is_Active()) {
-			const unsigned short wol_client_port = WOLNATInterface.Get_Port_As_Server_Client();
-			if (wol_client_port >= MIN_SERVER_PORT && wol_client_port <= MAX_SERVER_PORT) {
-				cNetwork::Init_Client(wol_client_port);
-			} else {
-				WWDEBUG_SAY(("WOL client port %hu outside valid range, falling back to default client init\n", wol_client_port));
-				cNetwork::Init_Client();
-			}
-		} else {
-			cNetwork::Init_Client();
-		}
+		cNetwork::Init_Client();
 
 		//
 		//	Wait for the client to connect to the server
@@ -857,71 +815,6 @@ GameInitMgrClass::Shutdown_LAN (void)
 
 ////////////////////////////////////////////////////////////////
 //
-//	Initialize_WOL
-//
-////////////////////////////////////////////////////////////////
-void
-GameInitMgrClass::Initialize_WOL (void)
-{
-#ifndef MULTIPLAYERDEMO
-
-#if !defined(_WIN32) || defined(_WIN64)
-	// WOLAPI COM binaries are 32-bit only; bail out early in 64-bit builds.
-	ConsoleBox.Print("Westwood Online is not available in 64-bit builds. Returning to main menu.\n");
-	RenegadeDialogMgrClass::Goto_Location (RenegadeDialogMgrClass::LOC_MAIN_MENU);
-	cGameType::Set_Game_Type(GAMETYPE_NONE);
-	Mode = MODE_UNKNOWN;
-	return;
-#else
-
-	WWDEBUG_SAY (("GameInitMgrClass::Initialize_WOL\n"));
-
-	if (Mode != MODE_UNKNOWN) {
-		Shutdown ();
-	}
-
-	//cSingleData::Set_Is_Single_Player (false);
-	cGameType::Set_Game_Type(GAMETYPE_MULTIPLAY);
-
-	//
-	// Activate WOL interface
-	//
-	GameModeManager::Find ("WOL")->Activate ();
-
-	//
-	//	Remember our state
-	//
-	IsClientRequired	= false;
-	IsServerRequired	= false;
-	Mode					= MODE_WOL;
-	return ;
-#endif
-#endif // !MULTIPLAYERDEMO
-}
-
-
-////////////////////////////////////////////////////////////////
-//
-//	Shutdown_WOL
-//
-////////////////////////////////////////////////////////////////
-void
-GameInitMgrClass::Shutdown_WOL (void)
-{
-#ifndef MULTIPLAYERDEMO
-
-   WWDEBUG_SAY (("GameInitMgrClass::Shutdown_WOL\n"));
-
-	GameModeManager::Find ("WOL")->Deactivate ();
-
-	cGameType::Set_Game_Type(GAMETYPE_NONE);
-
-#endif // !MULTIPLAYERDEMO
-}
-
-
-////////////////////////////////////////////////////////////////
-//
 //	Shutdown
 //
 ////////////////////////////////////////////////////////////////
@@ -942,10 +835,6 @@ GameInitMgrClass::Shutdown (void)
 
 		case MODE_LAN:
 			Shutdown_LAN ();
-			break;
-
-		case MODE_WOL:
-			Shutdown_WOL ();
 			break;
 	}
 

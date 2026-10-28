@@ -369,8 +369,7 @@ CnCReferenceMenuClass::On_Frame_Update (void)
 		The_Game() != nullptr &&
 		!IS_MISSION &&
 		cNetwork::I_Am_Client() &&
-		The_Game()->IsTeamChangingAllowed.Is_True() &&
-		(!(GameModeManager::Find("WOL") != nullptr && GameModeManager::Find("WOL")->Is_Active()) || The_Game()->IsLaddered.Is_False());// &&
+		The_Game()->IsTeamChangingAllowed.Is_True();// &&
 		//GameModeManager::Find("Combat") != nullptr &&
 		//GameModeManager::Find("Combat")->Is_Active();
 
@@ -498,7 +497,6 @@ CnCReferenceMenuClass::Exit_Game (void)
 		!IS_MISSION &&
 		cNetwork::I_Am_Client() &&
 		The_Game()->IsTeamChangingAllowed.Is_True() &&
-		(!(GameModeManager::Find("WOL") != nullptr && GameModeManager::Find("WOL")->Is_Active()) || The_Game()->IsLaddered.Is_False()) &&
 		GameModeManager::Find("Combat") != nullptr &&
 		GameModeManager::Find("Combat")->Is_Active();
 

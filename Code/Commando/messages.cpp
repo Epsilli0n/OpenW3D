@@ -52,7 +52,6 @@
 #include "playertype.h"
 #include "translatedb.h"
 #include "string_ids.h"
-#include "wolgmode.h"
 #include "bitpackids.h"
 #include "msgstatlistgroup.h"
 #include "vistable.h"
@@ -1157,13 +1156,6 @@ void cNetwork::Intermission_Over_Processing(void)
 		if (The_Game () != nullptr && The_Game ()->Is_Map_Cycle_Over () == false) {
 			extern bool g_b_core_restart;
 			g_b_core_restart = true;
-			GameModeClass *game_mode = GameModeManager::Find("WOL");
-			if (game_mode && game_mode->Is_Active()) {
-				WolGameModeClass* wol_game = (WolGameModeClass*) game_mode;
-				if (wol_game->Post_Game_Check()) {
-					g_b_core_restart = false;
-				}
-			}
 		} else {
 			GameInitMgrClass::Set_Needs_Game_Exit (true);
 		}

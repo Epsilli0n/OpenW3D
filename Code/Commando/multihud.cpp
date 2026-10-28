@@ -416,18 +416,6 @@ void MultiHUDClass::Show_Player_Names(void)
 				}
 			}
 
-			//
-			// WOL game newbies get a "recruit" tag
-			//
-			if (GameModeManager::Find("WOL")->Is_Active() &&
-				 COMBAT_STAR != nullptr &&
-				 p_soldier->Is_Teammate(COMBAT_STAR) &&
-				 p_player->Get_Num_Wol_Games() <= cPlayer::NUM_NEWBIE_GAMES) {
-
-				text += U_CHAR("\n");
-				text += TRANSLATE(IDS_MP_RECRUIT);
-			}
-
 			Vector2 textExtent = NameRenderer->Get_Text_Extents(text);
 			float x = text_position_2d.X - textExtent.X / 2.0f;
 			float y = text_position_2d.Y;

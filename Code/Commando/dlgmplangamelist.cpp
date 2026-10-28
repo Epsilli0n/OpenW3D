@@ -41,7 +41,6 @@
 #include "gamechannel.h"
 #include "gamechanlist.h"
 #include "gameinitmgr.h"
-#include "wolgmode.h"
 #include "dialogmgr.h"
 #include "cnetwork.h"
 #include "ww3d.h"
@@ -216,16 +215,6 @@ MPLanGameListMenuClass::On_Command (int ctrl_id, int message_id, unsigned int pa
 			WideStringClass nickname = Get_Dlg_Item_Text (IDC_NICKNAME_EDIT);
 			cNetInterface::Set_Nickname (nickname);
 
-			/*
-			//
-			//	Cache this value, don't know if we need to or not anymore...
-			//
-			RegistryClass registry (APPLICATION_SUB_KEY_NAME_WOLSETTINGS);
-			if (registry.Is_Valid ()) {
-				registry.Set_Int (REG_VALUE_LAST_GAME_TYPE, 0);
-			}
-			*/
-
 			//
 			//	Create the new game data
 			//
@@ -274,11 +263,7 @@ MPLanGameListMenuClass::On_Frame_Update (void)
 		//
 		Update_Game_List ();
 
-		if (GameInitMgrClass::Is_WOL_Initialized ()) {
-			UpdateTimer = 20000;
-		} else {
-			UpdateTimer = 1000;
-		}
+		UpdateTimer = 1000;
 	}
 
 	if (UpdateNickname) {
