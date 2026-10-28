@@ -2,6 +2,7 @@
 
 Changes added on top of [w3dhub/OpenW3D](https://github.com/w3dhub/OpenW3D) at `523ea385`:
 
+- 64-bit Windows as the primary target: x64 builds now have sound and movies (FFmpeg and OpenAL replace the 32-bit-only Miles and Bink), the VS 2026 preset targets x64, and CI checks the x64 media build
 - Native Direct3D 12 renderer backend (`W3D_RENDERER_D3D12`, on by default for MSVC Windows builds)
   - Device layer: flip-model swap chain, per-frame fences, upload ring, persistent shader-visible descriptor heaps, deferred resource release
   - Fixed-function pipeline emulated in a single HLSL shader (transforms, 4 lights, texgen, two texture stages with all D3DTOP ops, alpha test, fog), compiled at build time with dxc
@@ -16,7 +17,7 @@ Changes added on top of [w3dhub/OpenW3D](https://github.com/w3dhub/OpenW3D) at `
 - Widescreen fixes: dialogs laid out in a centred 4:3 area, menu backdrop keeps its framing
 - Defaults to the desktop resolution on first run instead of 800x600
 - Benchmarking switches: `W3D_VSYNC=0` and `W3D_RENDER_STATS=1` (D3D12 also logs draws, uploads and GPU frame time)
-- FFmpeg and OpenAL by default for 64-bit MSVC builds, installed through vcpkg (`dev/vcpkg-media`) in the `win` preset, with fallback to the stubs if missing
+- FFmpeg and OpenAL installed through vcpkg (`dev/vcpkg-media`) in the `win` preset, with fallback to the stubs if missing
 - Visual Studio 2026 x64 preset, and MSVC builds require the VS 2026 toolset
 - Tests: D3D12 device (runs on WARP), D3D12 format conversion, D3DX replacement checks
 - `dev/stage-run.ps1` stages a runnable folder against an existing Renegade install
