@@ -165,7 +165,6 @@ include(dx9)
 
 include(d3d12)
 
-include(gamespy)
 
 # Add main build targets
 add_subdirectory(Code)

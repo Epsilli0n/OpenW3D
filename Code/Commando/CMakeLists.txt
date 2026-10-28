@@ -350,7 +350,6 @@ add_library(commando INTERFACE)
 target_link_libraries(commando INTERFACE
     winmm
     wsock32
-    ws2_32
     version
     wwcommon
     bandtest

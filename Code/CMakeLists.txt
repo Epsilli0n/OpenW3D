@@ -45,9 +45,14 @@ target_include_directories(wwcommon INTERFACE
 )
 
 target_link_libraries(wwcommon INTERFACE
-    gamespy
     d3d9lib
 )
+
+if(WIN32)
+    # WinSock for networking, the server list reporter and remote admin. The GameSpy SDK target used to
+    # bring this in for every target.
+    target_link_libraries(wwcommon INTERFACE ws2_32)
+endif()
 
 if(TARGET ffmpeg)
     target_link_libraries(wwcommon INTERFACE ffmpeg)

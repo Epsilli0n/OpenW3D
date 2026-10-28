@@ -32,7 +32,6 @@
 #include "cnetwork.h"
 #include "DlgMPConnect.h"
 #include "GameSpy_QnR.h"
-#include <gamespy/ghttp/ghttp.h>
 #include "useroptions.h"
 #include "renegadedialogmgr.h"
 #include "dialogtests.h"
@@ -84,7 +83,6 @@ cGameSpyAdmin::Think
 		}
 	}
 
-	ghttpThink();
 }
 
 //----------------------------------------------------------------------------------
