@@ -16,6 +16,9 @@ Changes added on top of [w3dhub/OpenW3D](https://github.com/w3dhub/OpenW3D) at `
 - HUD scales with screen resolution (2x at 1080p/1440p, 3x at 2160p, or `HUDScale` in `[RenderDevice]`), with sharp point-sampled bitmap fonts and a square reticle on wide screens
 - Widescreen fixes: dialogs laid out in a centred 4:3 area, menu backdrop keeps its framing
 - Defaults to the desktop resolution on first run instead of 800x600
+- Westwood Online removed (client code, `WWOnline`, `wolapi`, `WOLBrowser`, NAT layer, embedded browser); stock `server.ini` files asking for WOL host on the LAN instead
+- GameSpy SDK and CD key authentication removed; dedicated servers report to the community master servers with our own broadcaster in TT's format, including `SVER=OpenW3D/<version>` and an `OpenW3D` rule (see `docs/networking.md`)
+- In-game internet server browser (Multiplay Internet > GameSpy > Join) that lists only servers the client can join, plus `--connect IP[:PORT]`, `--nickname` and `--password`
 - Benchmarking switches: `W3D_VSYNC=0` and `W3D_RENDER_STATS=1` (D3D12 also logs draws, uploads and GPU frame time)
 - FFmpeg and OpenAL installed through vcpkg (`dev/vcpkg-media`) in the `win` preset, with fallback to the stubs if missing
 - Visual Studio 2026 x64 preset, and MSVC builds require the VS 2026 toolset
