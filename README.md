@@ -1,73 +1,25 @@
+# OpenW3D (Epsilli0n fork)
 
-# OpenW3D
+Changes added on top of [w3dhub/OpenW3D](https://github.com/w3dhub/OpenW3D) at `523ea385`:
 
-This project is a continuation of the "Command & Conquer: Renegade" game engine that was released as open source software by EA [here](https://github.com/electronicarts/CnC_Renegade).
-It is being developed to be more portable to other platforms, to fix bugs and to develop a platform to build other Renegade like games on top of.
-
-## API Documentation
-
-See the [documentation guide](docs/README.md) to generate the API reference locally
-and review documentation in pull requests.
-
-## Dependencies
-
-OpenW3D makes use of several open source libraries to provide cross platform support.
-In order to build the project they will need to be made available to the build system either via a package manager or manually installing and updating your path environment variables.
-
-For convenience we provide support for using vcpkg to install the required dependencies:
-
-[SDL3](https://wiki.libsdl.org/SDL3/FrontPage)
-
-[OpenAL-soft](https://openal-soft.org/)
-
-[FFMpeg](https://www.ffmpeg.org/)
-
-[FreeType](https://freetype.org/)
-
-[ICU4C](https://icu.unicode.org/)
-
-[Qt](https://www.qt.io/)
-
-In addition to these, we also use these less commonly packaged libraries that are pulled in by the build system. You do not need to provide these manually unless you are building off line:
-
-[Crunch](https://github.com/DaemonEngine/crunch)
-
-[GameSpySDK](https://github.com/TheAssemblyArmada/GamespySDK)
-
-
-## Compiling the Project
-
-For most platforms the following command should build the project with the default configuration when run from the root folders of a cloned copy of this repository:
-
-`cmake -B build . && cmake --build build`
-
-The build artifacts will end up in the `build` subdirectory which will be created.
-
-It is also possible to build from various IDE by using the presets provided in `CMakePresets.json`.
-
-You can also create your own prests by creating and populating `CMakeUserPresets.json` in the root folder of the cloned repository. This is useful for development or testing purposes to create additional build options.
-See [cmake-presets](https://cmake.org/cmake/help/latest/manual/cmake-presets.7.html) for more information.
-
-## Running the Game
-
-To use the compiled binaries, you must provide game data. At the time of writing only the original C&C: Renegade game is tested and supported.
-The C&C Ultimate Collection is available for purchase on [EA App](https://www.ea.com/en-gb/games/command-and-conquer/command-and-conquer-the-ultimate-collection/buy/pc) or [Steam](https://store.steampowered.com/bundle/39394/Command__Conquer_The_Ultimate_Collection/).
-The compiled binaries will also work with a fully patched installation from the original CDs.
-
-## Known Issues
-
-The “Debug” configuration of the “Commando” project (the Renegade main project) will sometimes fail to link the final executable.
-This is due to Windows Defender incorrectly detecting RenegadeD.exe containing a virus (possibly due to the embedded browser code).
-Excluding the output `/Run/` folder found in the root of this repository in Windows Defender should resolve this for you.
-
-## Contributing
-
-We welcome contributions to the project! If you’re interested in contributing, you need to have knowledge of C++.
-Join the developer chat on [Discord](https://discord.com/invite/jMmmRa2) for more information on how to get started.
-Please make sure to read our [Contributing Guidelines](CONTRIBUTING.md) before submitting a pull request.
-
-## License
-
-EA has not endorsed and does not support this project. All trademarks are the property of their respective owners.
-
-This repository and its contents are licensed under the GPL v3 license, with additional terms applied. Please see [LICENSE.md](LICENSE.md) for details.
+- Native Direct3D 12 renderer backend (`W3D_RENDERER_D3D12`, on by default for MSVC Windows builds)
+  - Device layer: flip-model swap chain, per-frame fences, upload ring, persistent shader-visible descriptor heaps, deferred resource release
+  - Fixed-function pipeline emulated in a single HLSL shader (transforms, 4 lights, texgen, two texture stages with all D3DTOP ops, alpha test, fog), compiled at build time with dxc
+  - Pixel format conversion for every D3D9-era format the engine uses, including DXT1-5
+  - Render-to-texture, readback, surface copies, mip generation and TGA screenshots
+  - Matches D3D9 pixel centres so UI and HUD stay sharp
+  - Records only changed state per draw (root constants, pipeline cache, skipped redundant binds)
+  - Not yet implemented: additional swap chains (editor only) and gamma ramp
+- Renderer backend interface (`w3drender.h`) with a Direct3D 9 backend; all engine rendering goes through it and all D3DX use is confined to the D3D9 backend
+- Renderer selection with `--renderer d3d9|d3d12` or `Renderer=` in `[RenderDevice]` of `openw3d.conf` (D3D9 is the default)
+- HUD scales with screen resolution (2x at 1080p/1440p, 3x at 2160p, or `HUDScale` in `[RenderDevice]`), with sharp point-sampled bitmap fonts and a square reticle on wide screens
+- Widescreen fixes: dialogs laid out in a centred 4:3 area, menu backdrop keeps its framing
+- Defaults to the desktop resolution on first run instead of 800x600
+- Benchmarking switches: `W3D_VSYNC=0` and `W3D_RENDER_STATS=1` (D3D12 also logs draws, uploads and GPU frame time)
+- FFmpeg and OpenAL by default for 64-bit MSVC builds, installed through vcpkg (`dev/vcpkg-media`) in the `win` preset, with fallback to the stubs if missing
+- Visual Studio 2026 x64 preset, and MSVC builds require the VS 2026 toolset
+- Tests: D3D12 device (runs on WARP), D3D12 format conversion, D3DX replacement checks
+- `dev/stage-run.ps1` stages a runnable folder against an existing Renegade install
+- Fixes: version read from the latest `v*` tag, launcher builds without MFC, DxErr shim includes `stdio.h`, ATI back buffer workaround limited to D3D9
+- CI: Windows jobs pinned to `windows-2025`, MSVC x64 built with FFmpeg and OpenAL, packaging and artifact upload only in the upstream repository
+- `.gitignore` entries for AI agent and assistant artifacts
