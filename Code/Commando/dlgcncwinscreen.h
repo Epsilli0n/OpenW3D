@@ -103,7 +103,6 @@ private:
 	Render2DClass							BlackoutRenderer;
 	MenuBackDropClass						WinScreenBackdrop;
 	float										UpdateTimer;
-	bool										ShowLadderPoints;
 	static CNCWinScreenMenuClass *	_TheInstance;
 	static const float					UpdateIntervalS;
 };
