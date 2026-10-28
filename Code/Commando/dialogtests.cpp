@@ -397,6 +397,12 @@ GameSpyMainDialogClass::On_Init_Dialog (void)
 	MenuDialogClass::On_Init_Dialog ();
 
 	//
+	//	Join used to quit and launch GameSpy Arcade, which no longer exists. It stays disabled until the in-game
+	// server browser replaces it.
+	//
+	Enable_Dlg_Item (IDC_MENU_GAMESPY_JOIN, false);
+
+	//
 	// Init the gamespy logo
 	//
 	if (Get_Dlg_Item(IDC_GAMESPY_ICON) != nullptr) {
@@ -459,14 +465,6 @@ GameSpyMainDialogClass::On_Command (int ctrl_id, int mesage_id, unsigned int par
 {
 	switch (ctrl_id)
 	{
-		case IDC_MENU_GAMESPY_JOIN:
-		{
-			GameSpyQnR.LaunchArcade();
-			extern void Stop_Main_Loop (int);
-			Stop_Main_Loop(EXIT_SUCCESS);
-			break;
-		}
-
 		case IDC_MENU_GAMESPY_HOST:
 			{
 				if (!DetectingBandwidth) {

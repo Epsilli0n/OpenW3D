@@ -2123,6 +2123,20 @@ cGameData::Rotate_Map(void)
 }
 
 //-----------------------------------------------------------------------------
+// The map Rotate_Map will switch to next, without changing anything. Used by the
+// server list reporter.
+//-----------------------------------------------------------------------------
+const StringClass &
+cGameData::Get_Next_Map_Name(void) const
+{
+	int next_map = MapCycleIndex + 1;
+	if (next_map >= MAX_MAPS || MapCycle[next_map].Is_Empty()) {
+		next_map = 0;
+	}
+	return MapCycle[next_map];
+}
+
+//-----------------------------------------------------------------------------
 void cGameData::Set_Win_Text(WideStringClass & text)
 {
 	WinText = text;

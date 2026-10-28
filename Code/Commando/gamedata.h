@@ -150,6 +150,7 @@ class	cGameData :
 		const StringClass& Get_Mod_Name()					const	{return ModName;}
 		const StringClass& Get_Map_Name()					const	{return MapName;}
 		const StringClass& Get_Map_Cycle(int map);
+		const StringClass& Get_Next_Map_Name(void) const;
 		bool				Does_Map_Exist (void);
 		const WideStringClass & Get_Owner(void)			const {return Owner;}
 		int				Get_Max_Players(void)				const	{return MaxPlayers;}
