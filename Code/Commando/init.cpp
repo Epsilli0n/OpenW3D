@@ -120,6 +120,23 @@
 extern const char *VALUE_NAME_TEXTURE_FILTER_MODE;
 
 /*
+** The auto restart flag lives in openw3d.conf, which the client and the dedicated server share. A server that
+** was killed leaves it set, and a plain client launch would then start hosting. Only honour it when a server
+** settings file is in use (--startserver, --internetserver, or the dedicated server's default server.ini).
+*/
+static bool Should_Auto_Restart(void)
+{
+	if (!AutoRestart.Get_Restart_Flag()) {
+		return false;
+	}
+	if (!ServerSettingsClass::Is_Command_Line_Mode()) {
+		AutoRestart.Set_Restart_Flag(false);
+		return false;
+	}
+	return true;
+}
+
+/*
 ** Define IMMEDIATE_LOAD if you want to have the game start right
 ** up in a given level (for profiling for example)
 */
@@ -817,7 +834,7 @@ bool Game_Init(void)
 		}
 		WW3D::Enable_Static_Sort_Lists (true);
 	}
-	if (AutoRestart.Get_Restart_Flag() || ServerSettingsClass::Is_Command_Line_Mode() || ConsoleBox.Is_Exclusive()) {
+	if (Should_Auto_Restart() || ServerSettingsClass::Is_Command_Line_Mode() || ConsoleBox.Is_Exclusive()) {
 		if (!ConsoleBox.Is_Exclusive()) {
 			::ShowWindow( MainWindow, SW_MINIMIZE );	// minimize if we are starting automatically.
 		}
@@ -1018,7 +1035,7 @@ bool Game_Init(void)
 	//
 	// If this is a post crash restart (or a FDS starting up) then just go straight into the game.
 	//
-	if (AutoRestart.Get_Restart_Flag()) {
+	if (Should_Auto_Restart()) {
 		AutoRestart.Restart_Game();
 	} else if (cGameSpyAdmin::Is_Gamespy_Game()) {
 		if (!ConsoleBox.Is_Exclusive()) {
