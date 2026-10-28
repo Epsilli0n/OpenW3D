@@ -453,7 +453,6 @@ target_link_libraries(leveledit PRIVATE
     wwutil
     wwmath
     wwnet
-    wwonline
     wwsaveloade
     wwtranslatedb
     wwui

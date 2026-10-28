@@ -36,13 +36,11 @@ target_include_directories(wwcommon INTERFACE
     wwlib
     WWMath
     wwnet
-    WWOnline
     wwphys
     wwsaveload
     wwtranslatedb
     wwui
     wwutil
-    wolapi
     .
 )
 
@@ -86,7 +84,6 @@ add_subdirectory(wwdebug)
 add_subdirectory(wwlib)
 add_subdirectory(WWMath)
 add_subdirectory(wwnet)
-add_subdirectory(WWOnline)
 add_subdirectory(wwphys)
 add_subdirectory(wwsaveload)
 add_subdirectory(wwtranslatedb)

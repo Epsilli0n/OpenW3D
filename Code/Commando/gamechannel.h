@@ -33,7 +33,7 @@
 
 #include "wwdebug.h"
 #include "always.h"
-#include <WWOnline/RefPtr.h>
+#include "RefPtr.h"
 #include "refcount.h"
 
 class cGameData;

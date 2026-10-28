@@ -47,7 +47,7 @@
 #include "renegadedialog.h"
 #include "DlgWOLWait.h"
 #include <wwlib/Notify.h>
-#include <WWOnline/RefPtr.h>
+#include "RefPtr.h"
 
 
 class WheeledVehicleDefClass;

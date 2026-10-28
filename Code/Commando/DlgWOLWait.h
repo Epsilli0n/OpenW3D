@@ -38,8 +38,8 @@
 
 #include <wwui/popupdialog.h>
 #include <wwlib/Notify.h>
-#include <WWOnline/RefPtr.h>
-#include <WWOnline/WaitCondition.h>
+#include "RefPtr.h"
+#include "WaitCondition.h"
 
 class DlgWOLWait;
 

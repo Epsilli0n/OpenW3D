@@ -84,6 +84,10 @@ set(COMMANDO_SRC
     WINMAIN.H
     winmain_compat.h
     bandwidthcheck.cpp
+    RefCounted.h
+    RefPtr.h
+    WaitCondition.cpp
+    WaitCondition.h
     bandwidthcheck.h
     mpsettingsmgr.cpp
     mpsettingsmgr.h
@@ -367,7 +371,6 @@ set(W3D_GROUP_LIBS
     wwutil
     wwmath
     wwnet
-    wwonline
     wwsaveload
     wwtranslatedb
     wwui

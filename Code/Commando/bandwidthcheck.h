@@ -42,7 +42,7 @@
 #ifndef _BANDWIDTHCHECK_H
 #define _BANDWIDTHCHECK_H
 
-#include <WWOnline/WaitCondition.h>
+#include "WaitCondition.h"
 #include <wwlib/Except.h>
 #include <wwlib/thread.h>
 #include <windows.h>

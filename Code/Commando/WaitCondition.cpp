@@ -42,7 +42,8 @@
 #include "always.h"
 
 #include "WaitCondition.h"
-#include "WOLString.h"
+#include "string_ids.h"
+#include <wwtranslatedb/translatedb.h>
 #include <wwlib/win.h>
 
 #include "systimer.h"
@@ -117,14 +118,14 @@ WaitCondition::WaitResult WaitCondition::WaitFor(CallbackHook& hook, unsigned in
 		// Yeild time to client callback
 		if (hook.DoCallback())
 			{
-			EndWait(UserCancel, WOLSTRING("WOL_CANCELED"));
+			EndWait(UserCancel, TRANSLATE(IDS_WOL_CANCELED));
 			break;
 			}
 
 		// Watch for timeout
 		if ((TIMEGETTIME() - startTime) > timeout)
 			{
-			EndWait(TimeOut, WOLSTRING("WOL_TIMEDOUT"));
+			EndWait(TimeOut, TRANSLATE(IDS_WOL_TIMEDOUT));
 			}
 		}
 
@@ -591,7 +592,7 @@ WaitCondition::WaitResult SerialWait::GetResult(void)
 				// Check for timeout
 				if ((TIMEGETTIME() - mStartTime) > wait->GetTimeout())
 					{
-					wait->EndWait(TimeOut, WOLSTRING("WOL_TIMEDOUT"));
+					wait->EndWait(TimeOut, TRANSLATE(IDS_WOL_TIMEDOUT));
 					EndWait(TimeOut, wait->GetWaitText());
 					}
 				break;
@@ -892,7 +893,7 @@ WaitCondition::WaitResult ANDWait::GetResult(void)
 			// Check for timeout while we are still waiting
 			if ((TIMEGETTIME() - mStartTime) > GetTimeout())
 				{
-				EndWait(TimeOut, WOLSTRING("WOL_TIMEDOUT"));
+				EndWait(TimeOut, TRANSLATE(IDS_WOL_TIMEDOUT));
 				}
 			}
 		}
