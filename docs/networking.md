@@ -67,4 +67,15 @@ TT changed the network protocol, so TT clients and OpenW3D builds cannot join ea
 - Branch `online/remove-wol-gamespy`.
 - `server.ini` with `GameType = WOL`, or with no `GameType`, now hosts as LAN with a warning. Checked: a stock `server.ini` opens UDP 4848.
 - `--gamespy-connect IP:PORT` parses the address correctly. Checked: the client joined a local dedicated server at `10.0.0.214:4848`.
-- Next: remove WOL (AutoStart state machine first, then the `Find("WOL")` call sites, then the files and the `wwonline` library).
+- WOL removed in four commits:
+  1. Auto start always uses the LAN game mode.
+  2. Every `Find("WOL")` call site follows the non-WOL path. The WOL game mode is no longer registered, and the console commands `wol`, `pat`, `allow` and `page` are gone.
+  3. The WOL client code is deleted (about 80 files in `Code/Commando`), along with the NAT negotiation layer, the patch download dialog and the embedded web browser (`W3D_BUILD_OPTION_WEBBROWSER`).
+  4. `Code/WWOnline`, `Code/wolapi` and `Code/WOLBrowser` are deleted. The generic `RefCounted`, `RefPtr` and `WaitCondition` helpers moved to `Code/Commando`.
+- Behaviour that changed along the way:
+  - Slave servers are disabled. They only ran under WOL, which also gave each one its own port, so FDS work needs to give slaves their own ports.
+  - wwnet drops `PACKETTYPE_FIREWALL_PROBE` packets.
+  - Alternate skins unlock by date only.
+  - The host options quick match, ladder and clan checkboxes are always off.
+- Checked after each step: all targets build (including LevelEdit), unit tests pass, the dedicated server hosts with the stock `server.ini`, and the client joins it with `--gamespy-connect`.
+- Next: GameSpy cleanup. Remove CD key authentication, write our own reporter for TT's broadcaster spec, add the `OpenW3D` rule, then drop the GameSpy SDK.
