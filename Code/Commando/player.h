@@ -49,7 +49,6 @@
 #include "networkobject.h"
 #include "netclassids.h"
 #include "wwstring.h"
-#include "gamespyauthmgr.h"
 #include "GameSpyBanList.h"
 
 class Vector3;
@@ -190,14 +189,6 @@ class cPlayer : public PlayerDataClass, public NetworkObjectClass {
 		//
 		// GameSpy support
 		//
-		void								Set_GameSpy_Auth_State(GAMESPY_AUTH_STATE_ENUM state);
-		GAMESPY_AUTH_STATE_ENUM		Get_GameSpy_Auth_State(void)	const	{return GameSpyAuthState;}
-		void								Set_GameSpy_Auth_State_Entry_Time_Ms(unsigned time_ms);
-		unsigned								Get_GameSpy_Auth_State_Entry_Time_Ms(void) const {return GameSpyAuthStateEntryTimeMs;}
-		void								Set_GameSpy_Challenge_String(StringClass & challenge_string);
-		void								Set_GameSpy_Hash_Id(StringClass & hash_id);
-		StringClass &					Get_GameSpy_Challenge_String(void) {return GameSpyChallengeString;}
-		StringClass &					Get_GameSpy_Hash_Id(void) {return GameSpyHashId;}
 		void								Set_GameSpy_Kick_State(GAMESPY_KICK_STATE_ENUM state);
 		GAMESPY_KICK_STATE_ENUM				Get_GameSpy_Kick_State(void)	const	{return GameSpyKickState;}
 		void								Set_GameSpy_Kick_State_Entry_Time_Ms(unsigned time_ms);
@@ -241,10 +232,6 @@ class cPlayer : public PlayerDataClass, public NetworkObjectClass {
 		//
 		// GameSpy support
 		//
-		GAMESPY_AUTH_STATE_ENUM		GameSpyAuthState;
-		unsigned								GameSpyAuthStateEntryTimeMs;
-		StringClass						GameSpyChallengeString;
-		StringClass						GameSpyHashId;
 		GAMESPY_KICK_STATE_ENUM		GameSpyKickState;
 		unsigned						GameSpyKickStateEntryTimeMs;
 

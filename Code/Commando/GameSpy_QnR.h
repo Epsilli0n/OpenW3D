@@ -33,7 +33,6 @@ DEFINES
 
 class CGameSpyQnR
 {
-	friend class CCDKeyAuth;
 protected:
 	char secret_key[9];
 	bool m_GSInit;

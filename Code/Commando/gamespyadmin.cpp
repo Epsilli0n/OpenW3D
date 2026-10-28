@@ -39,7 +39,6 @@
 #include "translatedb.h"
 #include "string_ids.h"
 #include "bandwidthcheck.h"
-#include "gamespyauthmgr.h"
 #include "specialbuilds.h"
 
 //
@@ -86,14 +85,6 @@ cGameSpyAdmin::Think
 	}
 
 	ghttpThink();
-
-
-#ifndef MULTIPLAYERDEMO
-	if (cNetwork::I_Am_Server())
-	{
-		cGameSpyAuthMgr::Think();
-	}
-#endif // MULTIPLAYERDEMO
 }
 
 //----------------------------------------------------------------------------------

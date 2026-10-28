@@ -84,7 +84,6 @@
 #include "gameinitmgr.h"
 #include "dlgcncwinscreen.h"
 #include "ConsoleMode.h"
-#include "CDKeyAuth.h"
 
 static int LastSortedSecond;
 
@@ -1540,8 +1539,6 @@ void cNetwork::Cleanup_After_Client(int client_id)
 	Receiver->Server_Send_Delete_Notifications();
 
 	NetworkObjectMgrClass::Restore_Dirty_Bits(client_id);
-
-	CCDKeyAuth::DisconnectUser(client_id);
 }
 
 //-----------------------------------------------------------------------------

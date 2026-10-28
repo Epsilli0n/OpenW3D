@@ -93,7 +93,6 @@
 	cRegistryBool cDevOptions::ShowPing(					APPLICATION_SUB_KEY_NAME_NETDEBUG, "ShowPing",                 false);
    cRegistryBool cDevOptions::ShowObjectTally(			APPLICATION_SUB_KEY_NAME_NETDEBUG, "ShowObjectTally",				false);
    cRegistryBool cDevOptions::ShowInactivePlayers(		APPLICATION_SUB_KEY_NAME_NETDEBUG, "ShowInactivePlayers",		false);
-	cRegistryBool cDevOptions::ShowGameSpyAuthState(	APPLICATION_SUB_KEY_NAME_NETDEBUG, "ShowGameSpyAuthState",		false);
 
 	cRegistryInt cDevOptions::DesiredFrameSleepMs(				APPLICATION_SUB_KEY_NAME_NETDEBUG, "DesiredFrameSleepMs",				0);
 	cRegistryInt cDevOptions::SimulatedPacketLossPc(			APPLICATION_SUB_KEY_NAME_NETDEBUG, "SimulatedPacketLossPc",				0);

@@ -20,7 +20,7 @@
 // Filename:     GameSpyBanList.h
 // Author:       Brian Hayes
 // Date:         Mar 2002
-// Description:  Maintains a list of banned nicknames/hashes/ipaddresses for GameSpy Servers
+// Description:  Maintains a list of banned nicknames/ipaddresses for GameSpy Servers
 //
 
 #ifndef __GAMESPYBANLIST_H__
@@ -39,11 +39,10 @@ enum GAMESPY_KICK_STATE_ENUM
 
 class BanEntry : public Node<BanEntry *>  {
 public:
-	BanEntry(const char *name = nullptr, const char *ip = nullptr, const char *hash_id = nullptr,
+	BanEntry(const char *name = nullptr, const char *ip = nullptr,
 		const char *ip_mask = nullptr, bool rtype = false);
 
 protected:
-	char	hashid[33];
 	char	nickname[40];
 	uint32_t	ipaddress;
 	uint32_t	ipmask;
@@ -51,7 +50,6 @@ protected:
 
 public:
 	const char *Get_Nick_Name(void) {return (const char *)nickname;}
-	const char *Get_Hash_ID(void) {return (const char *)hashid;}
 	uint32_t Get_Ip_Address(void) {return ipaddress;}
 	uint32_t Get_Ip_Netmask(void) {return ipmask;}
 	bool Get_Rule_Type(void) {return ruletype;}
@@ -73,9 +71,8 @@ protected:
 public:
 	void Think(void);
 	bool Kick_Player(int id) { return Begin_Player_Kick(id);}
-	void Ban_User(const char *nickname, const char *challenge_response = nullptr,
-		unsigned ipaddress = 0xffffffff);
-	bool Is_User_Banned(const char *nickname, const char *challenge_response, unsigned ipaddress);
+	void Ban_User(const char *nickname, unsigned ipaddress = 0xffffffff);
+	bool Is_User_Banned(const char *nickname, unsigned ipaddress);
 	void LoadBans(void);
 };
 

@@ -2513,8 +2513,6 @@ public:
 		} else if (cMiscUtil::Is_String_Same(input, "diagnostics") ||
 			cMiscUtil::Is_String_Same(input, "diag")) {
 			cDevOptions::ShowDiagnostics.Toggle();
-		} else if (cMiscUtil::Is_String_Same(input, "gs_auth")) {
-			cDevOptions::ShowGameSpyAuthState.Toggle();
 		} else if (cMiscUtil::Is_String_Same(input, "ids")) {
 			cDevOptions::ShowId.Toggle();
 		} else if (cMiscUtil::Is_String_Same(input, "money")) {
@@ -2693,7 +2691,6 @@ public:
 			cDevOptions::ShowWolLocation.Set(false);
 			cDevOptions::ShowPing.Set(false);
 			cDevOptions::ShowMoney.Set(false);
-			cDevOptions::ShowGameSpyAuthState.Set(false);
 
       } else if (cMiscUtil::Is_String_Same(input, "")) {
 
@@ -4101,11 +4098,7 @@ public:
 					continue;
 				}
 				if (stricmp(StringClass(input), StringClass(player->Get_Name())) == 0) {
-					if (player->Get_GameSpy_Hash_Id().Is_Empty()) {
-						GameSpyBanList.Ban_User(input);
-					} else {
-						GameSpyBanList.Ban_User(input, player->Get_GameSpy_Hash_Id());
-					}
+					GameSpyBanList.Ban_User(input);
 					break;
 				}
 			}
@@ -4120,12 +4113,8 @@ public:
 				}
 				if (t) {
 					player = cPlayerManager::Find_Player(atoi(input));
-					if (player) {
-						if (player->Get_GameSpy_Hash_Id().Is_Empty() && !player->Get_Name().Is_Empty()) {
-							GameSpyBanList.Ban_User(StringClass(player->Get_Name()));
-						} else if (!player->Get_GameSpy_Hash_Id().Is_Empty()) {
-							GameSpyBanList.Ban_User(StringClass(player->Get_Name()), player->Get_GameSpy_Hash_Id());
-						}
+					if (player && !player->Get_Name().Is_Empty()) {
+						GameSpyBanList.Ban_User(StringClass(player->Get_Name()));
 					}
 				} else {
 					ConsoleBox.Print("%s not found\n", input);

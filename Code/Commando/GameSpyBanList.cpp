@@ -41,7 +41,7 @@
 // Filename:     GameSpyBanList.cpp
 // Author:       Brian Hayes
 // Date:         Mar 2002
-// Description:  Maintains a list of banned nicknames/hashes/ipaddresses for GameSpy Servers
+// Description:  Maintains a list of banned nicknames/ipaddresses for GameSpy Servers
 //
 
 #include "cnetwork.h"
@@ -50,7 +50,6 @@
 #include "ini.h"
 #include "registry.h"
 #include "rawfile.h"
-#include "gamespyauthmgr.h"
 #include "sctextobj.h"
 #include "ConsoleMode.h"
 #include "gamesideservercontrol.h"
@@ -60,21 +59,17 @@
 
 cGameSpyBanList GameSpyBanList;
 
-BanEntry::BanEntry(const char *name, const char *ip, const char *hash_id, const char *ip_mask, bool rtype) {
+BanEntry::BanEntry(const char *name, const char *ip, const char *ip_mask, bool rtype) {
 
 	memset(nickname, 0, sizeof(nickname));
 	ipaddress = 0;
 	ipmask = 0xffffffff;
-	memset(hashid, 0, sizeof(hashid));
 	ruletype = rtype;
 
 	if (name) {
 		strncpy(nickname, name, sizeof(nickname) - 1);
 	}
 	if (ip) ipaddress = inet_addr(ip);
-	if (hash_id) {
-		strncpy(hashid, hash_id, sizeof(hashid) - 1);
-	}
 	if (ip_mask) {
 		ipmask = inet_addr(ip_mask);
 		if (!ipmask) ipmask = 0xffffffff;
@@ -92,14 +87,14 @@ cGameSpyBanList::~cGameSpyBanList() {
 	delete BanList;
 }
 
-void cGameSpyBanList::Ban_User(const char *nickname, const char *challenge_response, unsigned ipaddr) {
+void cGameSpyBanList::Ban_User(const char *nickname, unsigned ipaddr) {
 
 	char *buff = nullptr;
 	char *q = nullptr;
 	FILE *outf = nullptr;
 	BanEntry *t = nullptr;
 
-	if (nickname && !challenge_response) {
+	if (nickname) {
 		q = buff = new char[(strlen(nickname)*2)+1];
 		const char *n = nickname;
 		while (*n) {
@@ -109,8 +104,6 @@ void cGameSpyBanList::Ban_User(const char *nickname, const char *challenge_respo
 		*q = 0;
 	 	t = new BanEntry(buff);
 		delete [] buff;
-	} else if (challenge_response) {
-	 	t = new BanEntry(nullptr, nullptr, challenge_response);
 	} else if (ipaddr) {
 	 	t = new BanEntry(nullptr, cNetUtil::Address_To_String(ipaddr));
 	} else {
@@ -121,8 +114,13 @@ void cGameSpyBanList::Ban_User(const char *nickname, const char *challenge_respo
 	outf = fopen("banlist.txt", "at");
 
 	if (outf) {
-		fprintf(outf, "\"%s\" \"%s\" \"%s\" \"%s\" \"%s\"; \"%s\" console BAN\n", t->Get_Rule_Type() ? "Allow" : "Deny",
-			t->Get_Nick_Name(), t->Get_Hash_ID(),
+		//
+		// The third column used to hold the GameSpy CD key hash. CD key
+		// authentication is gone, so it is always written empty to keep the
+		// file layout the same as before.
+		//
+		fprintf(outf, "\"%s\" \"%s\" \"\" \"%s\" \"%s\"; \"%s\" console BAN\n", t->Get_Rule_Type() ? "Allow" : "Deny",
+			t->Get_Nick_Name(),
 			t->Get_Ip_Address() ? cNetUtil::Address_To_String(t->Get_Ip_Address()) : "",
 			t->Get_Ip_Address() ? "255.255.255.255" : "", nickname ? nickname : "");
 		fclose(outf);
@@ -145,9 +143,8 @@ void cGameSpyBanList::Think(void) {
 				TIMEGETTIME() - player->Get_GameSpy_Kick_State_Entry_Time_Ms() > 3000) {
 			Final_Player_Kick(player->Get_Id());
 		} else if (player->Get_GameSpy_Kick_State() == GAMESPY_KICK_STATE_INITIAL &&
-				player->Get_GameSpy_Auth_State() == GAMESPY_AUTH_STATE_ACCEPTED) {
-			if (Is_User_Banned(StringClass(player->Get_Name()), player->Get_GameSpy_Hash_Id(),
-					player->Get_Ip_Address())) {
+				player->Is_Alive_And_Kicking()) {
+			if (Is_User_Banned(StringClass(player->Get_Name()), player->Get_Ip_Address())) {
 				Begin_Player_Kick(player->Get_Id());
 			} else {
 				player->Set_GameSpy_Kick_State(GAMESPY_KICK_STATE_APPROVED);
@@ -184,22 +181,13 @@ bool cGameSpyBanList::Final_Player_Kick(int id) {
 	return false;
 }
 
-bool cGameSpyBanList::Is_User_Banned(const char *nickname, const char *challenge_response,
-									 unsigned ipaddress) {
+bool cGameSpyBanList::Is_User_Banned(const char *nickname, unsigned ipaddress) {
 
 	BanEntry *t = BanList->First();
 
 	bool ret = false;
 
 	for (;t && t->Is_Valid(); t = t->Next()) {
-
-		if (challenge_response && *challenge_response &&
-				strcmp(challenge_response, t->Get_Hash_ID()) == 0) {
-			ret = true;
-		} else if (t->Get_Hash_ID() && strlen(t->Get_Hash_ID())){
-			ret = false;
-			continue;
-		}
 
 		if (ipaddress && t->Get_Ip_Address() && ((ipaddress & t->Get_Ip_Netmask()) ==
 				(t->Get_Ip_Address() & t->Get_Ip_Netmask()))) {
@@ -291,7 +279,6 @@ void cGameSpyBanList::LoadBans(void) {
 		char *nickname = nullptr;
 		char *ruletype = nullptr;
 		char *ip = nullptr;
-		char *hashid = nullptr;
 		char *ipmask = nullptr;
 
 		if (strlen(buff) < 3) continue;
@@ -314,13 +301,18 @@ void cGameSpyBanList::LoadBans(void) {
 		nickname = s;
 
 		while (q) {
+			//
+			// Skip the "hashid" column. It held the GameSpy CD key hash, which
+			// nothing produces anymore now that CD key authentication is gone.
+			// It is still parsed so older banlist.txt files keep loading, but its
+			// value is ignored. Entries that only had a hash will never match.
+			//
 			s = strchr(q, '"');
 			if (!s) break;
 			*s++ = 0;
 			q = strchr(s, '"');
 			if (!q) break;
 			*q++ = 0;
-			hashid = s;
 
 			s = strchr(q, '"');
 			if (!s) break;
@@ -340,7 +332,7 @@ void cGameSpyBanList::LoadBans(void) {
 			break;
 		}
 
-		BanEntry *t = new BanEntry(nickname, ip, hashid, ipmask, stricmp(ruletype, "Allow") == 0);
+		BanEntry *t = new BanEntry(nickname, ip, ipmask, stricmp(ruletype, "Allow") == 0);
 		BanList->Add_Tail(t);
 	}
 	fclose(outf);

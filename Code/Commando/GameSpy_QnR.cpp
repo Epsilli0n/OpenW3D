@@ -71,7 +71,6 @@
 #include "netutil.h"
 #include "GameSpyBanList.h"
 #include <gamespy/pt/pt.h>
-#include <gamespy/gcdkey/gcdkeys.h>
 #include <atomic>
 #include <chrono>
 #include <cstdio>
@@ -291,9 +290,6 @@ void CGameSpyQnR::Init(void) {
 			gamename, secret_key, c_basic_callback, c_info_callback, c_rules_callback,
 			c_players_callback, this);
 		WWASSERT(!test);
-		if (!m_Offline) {
-			gcd_init_qr(query_reporting_rec, cdkey_id);
-		}
 
 		StartTime = time(nullptr);
 		m_GSInit = true;
@@ -336,7 +332,6 @@ void CGameSpyQnR::Think()
 	if (m_GSInit && m_GSEnabled && GameInitMgrClass::Is_LAN_Initialized() &&
 			!CombatManager::Is_Loading_Level()) {
 		qr_process_queries(query_reporting_rec);
-		gcd_think();
 	}
 #endif
 }

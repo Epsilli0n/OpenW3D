@@ -118,7 +118,6 @@ class cDevOptions
 	static cRegistryBool ShowMoney;
 	static cRegistryBool ExtraNetDebug;
 	static cRegistryBool ExtraModemBandwidthThrottling;
-	static cRegistryBool ShowGameSpyAuthState;
 
    //
    // These are development conveniences for starting a client or server,

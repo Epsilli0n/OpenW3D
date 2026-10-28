@@ -1075,15 +1075,6 @@ void cPlayerManager::Construct_Heading(WideStringClass & string, bool force_verb
    }
 
 	//
-	// GameSpy auth. state
-	//
-   if (cNetwork::I_Am_Server() && cGameSpyAdmin::Is_Gamespy_Game() &&
-		cDevOptions::ShowGameSpyAuthState.Is_True()) {
-      substring.Format(U_CHAR("%-12s"), U_CHAR("GS_AUTH"));
-      string += substring;
-   }
-
-	//
 	// IP Address
 	//
 	if (cNetwork::I_Am_Server() && cDevOptions::ShowIpAddresses.Is_True()) {

@@ -292,10 +292,6 @@ set(COMMANDO_SRC
     gamedataupdateevent.h
     gameoptionsevent.cpp
     gameoptionsevent.h
-    gamespycschallengeresponseevent.cpp
-    gamespycschallengeresponseevent.h
-    gamespyscchallengeevent.cpp
-    gamespyscchallengeevent.h
     godmodeevent.cpp
     godmodeevent.h
     loadingevent.cpp
@@ -334,14 +330,10 @@ set(COMMANDO_SRC
     serverfps.h
     renegadecheatmgr.cpp
     renegadecheatmgr.h
-    CDKeyAuth.cpp
-    CDKeyAuth.h
     GameSpy_QnR.cpp
     GameSpy_QnR.h
     gamespyadmin.cpp
     gamespyadmin.h
-    gamespyauthmgr.cpp
-    gamespyauthmgr.h
     GameSpyBanList.cpp
     GameSpyBanList.h
     floodprotectionmgr.cpp

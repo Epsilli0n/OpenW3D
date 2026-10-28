@@ -103,7 +103,6 @@ cPlayer::cPlayer(void) :
 	Set_Is_Waiting_For_Intermission(false);
 	Set_App_Packet_Type(APPPACKETTYPE_PLAYER);
 
-	Set_GameSpy_Auth_State(GAMESPY_AUTH_STATE_INITIAL);
 	Set_GameSpy_Kick_State(GAMESPY_KICK_STATE_INITIAL);
 
    cPlayerManager::Add(this);
@@ -607,17 +606,6 @@ void cPlayer::Get_Player_String(int /* rank */, WideStringClass & string, bool f
    }
 
 	//
-	// GameSpy auth. state
-	//
-   if (cNetwork::I_Am_Server() && cGameSpyAdmin::Is_Gamespy_Game() &&
-		cDevOptions::ShowGameSpyAuthState.Is_True()) {
-		WideStringClass wide_string;
-		wide_string.Convert_From(cGameSpyAuthMgr::Describe_Auth_State(GameSpyAuthState));
-      substring.Format(U_CHAR("%-12s"), wide_string.Peek_Buffer());
-      string += substring;
-   }
-
-	//
 	// IP Address
 	//
 	if (cNetwork::I_Am_Server() && cDevOptions::ShowIpAddresses.Is_True()) {
@@ -1012,10 +1000,9 @@ void cPlayer::Set_Is_Active(bool flag)
 
 		if (IsActive.Is_False()) {
 			//
-			// Anyone who leaves will need to be reauthenticated next tim ethey attempt
-			// to join.
+			// Anyone who leaves will need to be checked against the ban list
+			// again next time they attempt to join.
 			//
-			Set_GameSpy_Auth_State(GAMESPY_AUTH_STATE_INITIAL);
 			Set_GameSpy_Kick_State(GAMESPY_KICK_STATE_INITIAL);
 		}
 
@@ -1041,38 +1028,6 @@ void cPlayer::Set_Num_Wol_Games(int num_games)
 	NumWolGames = num_games;
 	//WWDEBUG_SAY(("Set_Num_Wol_Games NumWolGames = %d\n", NumWolGames));
 	Set_Object_Dirty_Bit(NetworkObjectClass::BIT_RARE, true);
-}
-
-//------------------------------------------------------------------------------------
-void cPlayer::Set_GameSpy_Auth_State(GAMESPY_AUTH_STATE_ENUM state)
-{
-	if (state != GameSpyAuthState)
-	{
-		GameSpyAuthState = state;
-		GameSpyAuthStateEntryTimeMs = TIMEGETTIME();
-	}
-}
-
-//------------------------------------------------------------------------------------
-void cPlayer::Set_GameSpy_Auth_State_Entry_Time_Ms(unsigned time_ms)
-{
-	GameSpyAuthStateEntryTimeMs = time_ms;
-}
-
-//------------------------------------------------------------------------------------
-void cPlayer::Set_GameSpy_Challenge_String(StringClass & challenge_string)
-{
-	WWASSERT(!challenge_string.Is_Empty());
-
-	GameSpyChallengeString = challenge_string;
-}
-
-//------------------------------------------------------------------------------------
-void cPlayer::Set_GameSpy_Hash_Id(StringClass & hash_id)
-{
-	WWASSERT(!hash_id.Is_Empty());
-
-	GameSpyHashId = hash_id;
 }
 
 //------------------------------------------------------------------------------------
