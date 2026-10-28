@@ -65,3 +65,6 @@ TT changed the network protocol, so TT clients and OpenW3D builds cannot join ea
 ## Progress log
 
 - Branch `online/remove-wol-gamespy`.
+- `server.ini` with `GameType = WOL`, or with no `GameType`, now hosts as LAN with a warning. Checked: a stock `server.ini` opens UDP 4848.
+- `--gamespy-connect IP:PORT` parses the address correctly. Checked: the client joined a local dedicated server at `10.0.0.214:4848`.
+- Next: remove WOL (AutoStart state machine first, then the `Find("WOL")` call sites, then the files and the `wwonline` library).
