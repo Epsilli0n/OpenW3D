@@ -253,15 +253,16 @@ cUserOptions::ParseResult cUserOptions::Parse_Command_Line(int argc, char *argv[
                 if (end_port != nullptr && *end_port != '\0') {
                     return FAILURE;
                 }
-                if (arg_port != 0 || arg_port > 0) {
-                    port = uint16_t(arg_port);
+                if (arg_port <= 0 || arg_port > 0xffff) {
+                    return FAILURE;
                 }
+                port = uint16_t(arg_port);
                 saddr = saddr_mem = new char[tport - argval + 1];
                 memcpy(saddr_mem, argval, tport - argval);
                 saddr_mem[tport - argval] = '\0';
 			}
 
-			addr = ::inet_addr(argval);
+			addr = ::inet_addr(saddr);
 
             delete[] saddr_mem;
 
@@ -295,6 +296,7 @@ cUserOptions::ParseResult cUserOptions::Parse_Command_Line(int argc, char *argv[
 			WideStringClass wide_password;
 			wide_password.Convert_From(argval);
 			cGameSpyAdmin::Set_Password_Attempt(wide_password);
+			continue;
 		}
 #endif // !BETACLIENT
 
