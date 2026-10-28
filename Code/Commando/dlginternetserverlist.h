@@ -93,6 +93,7 @@ protected:
 	bool										RefreshPending;	// asked for a refresh that has not finished yet
 	WideStringClass						StatusText;
 	ServerBrowserEntry					PendingJoin;	// server waiting on the password prompt
+	WideStringClass						JoinNickname;	// nickname from the edit box when Join was pressed
 };
 
 

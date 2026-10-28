@@ -527,8 +527,8 @@ InternetServerListMenuClass::Join_Game (void)
 	//
 	//	Set the new nickname
 	//
-	WideStringClass nickname = Get_Dlg_Item_Text (IDC_NICKNAME_EDIT);
-	cNetInterface::Set_Nickname (nickname);
+	JoinNickname = Get_Dlg_Item_Text (IDC_NICKNAME_EDIT);
+	cNetInterface::Set_Nickname (JoinNickname);
 
 	PendingJoin = entry;
 
@@ -595,6 +595,13 @@ InternetServerListMenuClass::Connect_To_Server (void)
 	WWASSERT(PTheGameData != nullptr);
 	PTheGameData->Set_Ip_Address (PendingJoin.Address);
 	PTheGameData->Set_Port (PendingJoin.GamePort);
+
+	//
+	//	The connect starts while the Internet menus are up (GameSpy mode), but the player name is sent again
+	// after they close, when the client reads the LAN nickname. Set both, and the password directly.
+	//
+	cNetInterface::Set_Lan_And_Internet_Nickname (JoinNickname);
+	PTheGameData->Set_Password (cGameSpyAdmin::Get_Password_Attempt ());
 
 	cNetwork::Init_Client ();
 

@@ -110,6 +110,26 @@ void cNetInterface::Set_Nickname(WideStringClass & name)
 }
 
 //-----------------------------------------------------------------------------
+// Joining from the internet server list starts in internet (GameSpy) mode and
+// finishes in LAN mode once the menus close, and the name is read in both.
+//-----------------------------------------------------------------------------
+void cNetInterface::Set_Lan_And_Internet_Nickname(WideStringClass & name)
+{
+	WideStringClass internet_name = name;
+	if (internet_name.Get_Length() > 30) {
+		internet_name[30] = 0;
+	}
+	StringClass narrow;
+	internet_name.Convert_To(narrow);
+	cUserOptions::GameSpyNickname.Set(narrow.Peek_Buffer());
+
+	Nickname = name;
+	if (Nickname.Get_Length() > 9) {
+		Nickname[9] = 0;
+	}
+}
+
+//-----------------------------------------------------------------------------
 void cNetInterface::Set_Random_Nickname(void)
 {
 	char name[MAX_COMPUTERNAME_LENGTH + 1];
