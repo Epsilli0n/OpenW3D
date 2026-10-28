@@ -192,7 +192,8 @@ cUserOptions::ParseResult cUserOptions::Parse_Command_Line(int argc, char *argv[
 			continue;
 		}
 
-		if (strcmp(cmd, "--gamespyserver") == 0) {
+		// List the server on the community masters. --gamespyserver is the old name.
+		if (strcmp(cmd, "--internetserver") == 0 || strcmp(cmd, "--gamespyserver") == 0) {
             const char *argval = argv[i + 1];
 			i++;
 			if (i >= argc) {
@@ -234,7 +235,8 @@ cUserOptions::ParseResult cUserOptions::Parse_Command_Line(int argc, char *argv[
 		}
 
 #ifndef BETACLIENT
-		if (strcmp(cmd, "--gamespy-connect") == 0) {
+		// Join a server directly. The --gamespy-* names are kept for launchers that still use them.
+		if (strcmp(cmd, "--connect") == 0 || strcmp(cmd, "--gamespy-connect") == 0) {
 			const char *argval = argv[i + 1];
 			i++;
 			if (i >= argc) {
@@ -272,7 +274,7 @@ cUserOptions::ParseResult cUserOptions::Parse_Command_Line(int argc, char *argv[
 			continue;
 		}
 
-		if (strcmp(cmd, "--gamespy-netplayername") == 0) {
+		if (strcmp(cmd, "--nickname") == 0 || strcmp(cmd, "--gamespy-netplayername") == 0) {
 			const char *argval = argv[i + 1];
 			i++;
 			if (i >= argc) {
@@ -285,7 +287,7 @@ cUserOptions::ParseResult cUserOptions::Parse_Command_Line(int argc, char *argv[
 			continue;
 		}
 
-		if (strcmp(cmd, "--gamespy-password") == 0) {
+		if (strcmp(cmd, "--password") == 0 || strcmp(cmd, "--gamespy-password") == 0) {
 			const char *argval = argv[i + 1];
 			i++;
 			if (i >= argc) {
@@ -322,12 +324,12 @@ void cUserOptions::Print_Command_Line_Help(bool error)
 	fprintf(file, "usage: %s [--ip IP] [--multi] [--regmod MOD] [--slave] [--startserver INI]\n", exe_file.string().c_str());
 	fprintf(file, "    [--gamedir PATH]\n");
 	fprintf(file, "    [--ini PATH]\n");
-	fprintf(file, "    [--gamespyserver ADDRESS] [--nodx]\n");
+	fprintf(file, "    [--internetserver INI] [--nodx]\n");
 	fprintf(file, "    [--renderer d3d9|d3d12]\n");
 #ifndef BETACLIENT
-	fprintf(file, "    [--gamespy-connect IP[:PORT]]\n");
-	fprintf(file, "    [--gamespy-netplayername NAME]\n");
-	fprintf(file, "    [--gamespy-password PASSWORD]\n");
+	fprintf(file, "    [--connect IP[:PORT]]\n");
+	fprintf(file, "    [--nickname NAME]\n");
+	fprintf(file, "    [--password PASSWORD]\n");
 #endif
 	fprintf(file, "    [--help]\n");
 }
