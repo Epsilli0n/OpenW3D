@@ -137,18 +137,24 @@ void ConsoleModeClass::Init(void)
 	if (ConsoleOutputHandle == INVALID_HANDLE_VALUE) {
 
 		/*
-		** Create a console.
+		** Create a console. When started from a terminal, WinMain has already attached to it and AllocConsole
+		** fails; use that terminal instead, but leave its colours and title alone.
 		*/
-		if (AllocConsole()) {
+		const bool own_console = AllocConsole() ? true : false;
+		if (own_console || GetConsoleWindow() != nullptr) {
 
 			/*
-			** Get the input and output handles.
+			** Get the input and output handles. Open the console itself rather than the standard handles,
+			** which point at a file or pipe when output is redirected.
 			*/
-			ConsoleOutputHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+			ConsoleOutputHandle = CreateFileA("CONOUT$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, 0, nullptr);
 			WWASSERT(ConsoleOutputHandle != INVALID_HANDLE_VALUE);
 
-			ConsoleInputHandle = GetStdHandle(STD_INPUT_HANDLE);
+			ConsoleInputHandle = CreateFileA("CONIN$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, 0, nullptr);
 			WWASSERT(ConsoleInputHandle != INVALID_HANDLE_VALUE);
+		}
+
+		if (own_console) {
 
 
 			/*
@@ -187,6 +193,9 @@ void ConsoleModeClass::Init(void)
 			** Bring up the console window to the foreground.
 			*/
 			SetForegroundWindow(ConsoleWindow);
+		}
+
+		if (ConsoleOutputHandle != INVALID_HANDLE_VALUE) {
 
 			/*
 			** Print up version info.
