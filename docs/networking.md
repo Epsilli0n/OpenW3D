@@ -29,11 +29,33 @@ Protocol (GameSpy v0, game name `ccrenegade`):
 - Clients connect to the master on TCP 28900, receive `\basic\\secure\IGNORE`, send `\gamename\ccrenegade\enctype\0\validate\TVJFLK6J\final\\queryid\1.1\list\cmp\gamename\ccrenegade\where\\final\`, and get back 6 bytes per server (IPv4 plus big-endian query port) followed by `\final\`.
 - Clients then send `\status\` to each server's query port over UDP and get `\key\value` pairs back, ending with `\final\`.
 
+### TT's broadcaster spec
+
+TT documents its broadcaster (added in TT 4.8 r8841) on its site, "GameSpy Protocol and New Broadcaster" (last updated 2024-11-21). A saved copy sits next to this file but is not committed. The points that matter for us:
+
+- **Masters:** the seven hosts above, tried in that order, heartbeat on UDP 27900. The same hosts serve the list.
+- **Framing:** each reply is `\key\value` pairs. A message can be split into parts. Every part carries `\queryid\<message>.<part>` and only the last part carries `\final\`. Parts should stay under about 400 characters.
+- **Heartbeat:** `\heartbeat\<queryport>\gamename\ccrenegade\final\`, sent at least every 30 seconds. The master replies `\heartbeatresult\<code>\final\`, where 0 means listed. Other codes: 1 game name mismatch, 2 missing `mapname`, 3 missing `hostname`, 4 missing `hostport`, 5 banned name, 6 banned address, 7 duplicate server, 8 blocked map prefix, 9 blocked `gametype`, 10 invalid heartbeat or query reply, 11 server asked to be removed, 12 no reply to the master's query.
+- **Queries a server answers:** `basic`, `info`, `rules`, `players`, `status` (all four combined) and `echo`.
+  - `basic`: `gamename`, `gamever`.
+  - `info`: `hostname`, `hostport`, `mapname`, `nextmap`, `gametype`, `numplayers`, `maxplayers`, `timeleft`, `timeelapsed`, `timelimit`. Times are `HH.mm.ss`. `gametype` is the map prefix, or the mod package name when one is loaded. Clients join at the address they queried plus `hostport`.
+  - `rules`: `SVER`, `CSVR`, `DED`, `DG`, `password`, `TC`, `FF`. C&C mode adds `SC`, `BDEG`, `BPEG`. Custom rules come last. TT reports `SVER=TT/4.80-r8841`.
+  - `players`: `team_tX`, `kills_tX`, `deaths_tX`, `score_tX` for each team (0 Nod, 1 GDI), then `player_X`, `kills_X`, `deaths_X`, `score_X`, team, `ping_X`, `time_X` for each player. X is the real player ID (1-127), so IDs can have gaps.
+- **Custom rules:** a `gamespy_rules.ini` in the server folder with a `[GamespyRules]` section adds key/value pairs to `rules` (for example `Owner`, `Discord`, `IRC`).
+
+### Gaps in our stock reporter (`GameSpy_QnR.cpp`)
+
+- Default masters are `master.gamespy.com` and `master.udpsoft.com`, which no longer resolve.
+- `info` cuts `hostname` to 25 characters and has no `nextmap`, `timeleft`, `timeelapsed` or `timelimit`.
+- `rules` has no `SVER`, `BDEG` or `BPEG`, and sends a stock `BW` key.
+- `players` sends nothing.
+- It uses the GameSpy SDK's query/reporting code and CD key hooks (`gcd_init_qr`, `gcd_think`). The protocol above is small enough to implement directly.
+
 About 30 servers were listed. Every TT server reports `SVER=TT/<version>` (or `Dragonade/<version> TT/<version>`), and nearly all report `gamever=838`, so `gamever` alone cannot tell builds apart.
 
 ## Telling our servers apart
 
-TT changed the network protocol, so TT clients and OpenW3D builds cannot join each other's servers. OpenW3D servers report an extra rules key, `OpenW3D=<network version>`. The OpenW3D server browser lists only servers that report that key with a network version matching its own. TT servers never send it, and TT's browser ignores keys it does not know.
+TT changed the network protocol, so TT clients and OpenW3D builds cannot join each other's servers. OpenW3D servers report `SVER=OpenW3D/<version>`, following TT's `SVER` pattern so other listers show something sensible, plus a custom rule `OpenW3D=<network version>`. The OpenW3D server browser lists only servers that report that key with a network version matching its own. TT servers never send it, and custom rules are a documented part of TT's format.
 
 ## Dedicated server
 
