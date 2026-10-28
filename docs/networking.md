@@ -66,7 +66,10 @@ The browser keeps only servers whose `OpenW3D` value equals its own. TT servers 
 - `--internetserver INI` (old name `--gamespyserver`) is `--startserver` plus master reporting.
 - Ports: UDP 4848 game (`Port`/`GameSpyGamePort`), UDP 25300 query (`GameSpyQueryPort`), UDP 3373 LAN broadcast, UDP 63999 remote admin (loopback unless `AllowRemoteAdmin`). The query socket binds to `PreferredGameSpyNic` or `--ip` when set.
 - To be listed from behind a router, forward UDP 25300 and 4848. A heartbeat sent from a home connection without forwarding got no `heartbeatresult` back.
-- The client and server share `openw3d.conf`. `AutoRestartFlag` there is only honoured when a server settings file is in use.
+- The client and server share `openw3d.conf`. `AutoRestartFlag` there is only honoured when a server settings file is in use. Client and server use separate single-instance locks, so both can run at once.
+- The server name comes from `bGameTitle` (or `wGameTitle`, which wins) in the game settings file named by `Config`, not from a `GameTitle` key.
+- Double-clicked, the server opens its own console. Started from a terminal, it uses that terminal.
+- Confirmed end to end on 2026-10-28: a `GameType = GameSpy` server behind a router with UDP 4848 and 25300 forwarded got `heartbeat result 0 (listed)`, appeared on `renmaster.cncirc.net` and `gamespy.tiberiantechnologies.org`, showed up in the in-game browser, and the client joined it from the list with its nickname; chat worked both ways.
 
 ## Client
 
@@ -76,8 +79,7 @@ The browser keeps only servers whose `OpenW3D` value equals its own. TT servers 
 ## Known gaps and follow-up work
 
 - Slave servers are disabled (`SlaveMasterClass::Startup_Slaves`). They only ran under WOL, which also gave each slave its own port.
-- The browser was checked by hand on 2026-10-28: it reached the master and reported "No OpenW3D servers found (28 listed)". Joining from the list has not been tried yet, because no OpenW3D server is listed.
-- Master listing has not been confirmed from a server with forwarded ports.
+- Only one machine has tested the full loop so far: an OpenW3D server and client behind the same router (NAT loopback), not two separate machines.
 - Menus still say "GameSpy" in places. The quick match, ladder and clan host options are always off but still shown.
 - The old `banlist.txt` hash column is parsed and ignored; hash-only bans no longer match.
 
@@ -92,3 +94,4 @@ Work done on branch `online/remove-wol-gamespy` (October 2026), one commit per s
 5. `--connect`, `--nickname`, `--password`, `--internetserver` added.
 6. Server browser backend with loopback tests (`commando_serverbrowser_tests`), then the dialog.
 7. A leftover auto restart flag no longer turns a client launch into a dedicated server.
+8. First real listing and join. Fixes found on the way: the server console works when started from a terminal, client and server no longer block each other's launch, and the nickname reaches the server when joining from the list.

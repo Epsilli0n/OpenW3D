@@ -25,6 +25,9 @@ Changes added on top of [w3dhub/OpenW3D](https://github.com/w3dhub/OpenW3D) at `
   - `--connect IP[:PORT]`, `--nickname`, `--password` and `--internetserver` (the old `--gamespy-*` names still work); joining with an explicit port works again
   - `server.ini` files that ask for WOL (or set no `GameType`) host on the LAN instead of sitting idle
   - A dedicated server killed mid-game no longer makes the next client launch start hosting
+  - Client and dedicated server can run at the same time (separate single-instance locks)
+  - The dedicated server console works when started from a terminal, not only when double-clicked
+  - Tested end to end: a server behind a router is listed on the community masters, appears in the in-game browser, and clients join it from the list
   - Slave servers are disabled until each one gets its own port
   - Test: `commando_serverbrowser_tests` checks the list and query handling against a fake master and servers on loopback
 - Benchmarking switches: `W3D_VSYNC=0` and `W3D_RENDER_STATS=1` (D3D12 also logs draws, uploads and GPU frame time)
