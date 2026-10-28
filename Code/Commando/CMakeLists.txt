@@ -228,6 +228,8 @@ set(COMMANDO_SRC
     dlgmpingameteamchat.h
     dlgmplangamelist.cpp
     dlgmplangamelist.h
+    dlginternetserverlist.cpp
+    dlginternetserverlist.h
     dlgmplanhostoptions.cpp
     dlgmplanhostoptions.h
     dlgmpslaveservers.cpp

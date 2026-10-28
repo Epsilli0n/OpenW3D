@@ -136,6 +136,7 @@ enum class RenegadeDialogID {
     IDD_MENU_SPLASH1 =                255,
     IDD_MENU_SPLASH2 =                256,
     IDD_MULTIPLAY_CONNECTION_REFUSED = 257,
+    IDD_MP_INTERNET_SERVER_LIST =     258,
 };
 #define IDC_INVITE_BUDDY_BUTTON         3
 #define IDC_PAGE_BUTTON                 4
@@ -850,6 +851,7 @@ enum class RenegadeDialogID {
 #define IDC_IMAGE_CTRL                  1657
 #define IDC_REFUSAL_TEXT                1658
 #define IDC_BUY_RENEGADE                1659
+#define IDC_SERVER_LIST_STATUS          1660
 #define IDC_VISIT_WEB_BUTTON            11037
 #define IDC_EXIT_BUTTON                 11038
 

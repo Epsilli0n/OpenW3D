@@ -82,6 +82,7 @@
 #include "dlgmultiplayoptions.h"
 #include "WWAudio.h"
 #include "dlgmplanhostoptions.h"
+#include "dlginternetserverlist.h"
 #include "shellapi.h"
 #include "gamespyadmin.h"
 #include "specialbuilds.h"
@@ -397,12 +398,6 @@ GameSpyMainDialogClass::On_Init_Dialog (void)
 	MenuDialogClass::On_Init_Dialog ();
 
 	//
-	//	Join used to quit and launch GameSpy Arcade, which no longer exists. It stays disabled until the in-game
-	// server browser replaces it.
-	//
-	Enable_Dlg_Item (IDC_MENU_GAMESPY_JOIN, false);
-
-	//
 	// Init the gamespy logo
 	//
 	if (Get_Dlg_Item(IDC_GAMESPY_ICON) != nullptr) {
@@ -477,6 +472,10 @@ GameSpyMainDialogClass::On_Command (int ctrl_id, int mesage_id, unsigned int par
 					DlgWOLWait::DoDialog(TRANSLATE (IDS_MENU_DETECTING_BANDWIDTH), bandwidth_wait, this);
 				}
 			}
+			break;
+
+		case IDC_MENU_GAMESPY_JOIN:
+			START_DIALOG (InternetServerListMenuClass);
 			break;
 
 		case IDC_MENU_GAMESPY_OPTIONS:
