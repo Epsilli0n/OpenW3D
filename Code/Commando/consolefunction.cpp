@@ -160,6 +160,8 @@
 #include "lightsolve.h"
 #include "lightsolvecontext.h"
 #include "debugbreak.h"
+#include "wolgmode.h"
+#include <WWOnline/WOLSession.h>
 
 
 

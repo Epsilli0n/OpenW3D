@@ -87,6 +87,7 @@
 #include "sctextobj.h"
 #include "mainloop.h"
 #include "pathutil.h"
+#include "WOLLogonMgr.h"
 #include <cstdio>
 #include <algorithm>
 

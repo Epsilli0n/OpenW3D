@@ -60,6 +60,7 @@
 
 
 #include <filesystem>
+#include "gamemode.h"
 #include <string.h>
 #include <stdio.h>
 

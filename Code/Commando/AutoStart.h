@@ -38,17 +38,7 @@
 #ifndef _AUTOSTART_H
 #define _AUTOSTART_H
 
-#include "WOLLogonMgr.h"
-#include <wwlib/Signaler.h>
-#include "wolgmode.h"
 #include "menudialog.h"
-#include <WWOnline/RefPtr.h>
-#include <WWOnline/WOLSession.h>
-
-namespace WOL {
-	class WOLSession;
-	class ServerError;
-}
 
 /*
 **
@@ -56,7 +46,7 @@ namespace WOL {
 **
 **
 */
-class AutoRestartClass : public Observer<WOLLogonAction>, public Observer<WWOnline::ServerError>, protected Signaler<WolGameModeClass>
+class AutoRestartClass
 {
 
 	public:
@@ -77,23 +67,12 @@ class AutoRestartClass : public Observer<WOLLogonAction>, public Observer<WWOnli
 
 
 		/*
-		** Callbacks.
-		*/
-		void HandleNotification(WOLLogonAction&) override;
-		void HandleNotification(WWOnline::ServerError& server_error) override;
-		void ReceiveSignal(WolGameModeClass&) override;
-
-		/*
 		** Enum of steps to go through to restart a game.
 		*/
 		typedef enum {
 			STATE_FIRST,
 			STATE_GAME_MODE_WAIT,
-			STATE_LOGIN,
 			STATE_CREATE_GAME,
-			STATE_CREATE_CHANNEL,
-			STATE_WAIT_CHANNEL_CREATE,
-			STATE_WAIT_CHANNEL_CREATE_RETRY,
 			STATE_START_GAME,
 			STATE_CANCELLED,
 			STATE_DONE,
@@ -106,11 +85,6 @@ class AutoRestartClass : public Observer<WOLLogonAction>, public Observer<WWOnli
 	private:
 
 		/*
-		** WOL Login state.
-		*/
-		WOLLogonAction	LogonAction;
-
-		/*
 		** Restart state.
 		*/
 		RestartStateType RestartState;
@@ -119,26 +93,6 @@ class AutoRestartClass : public Observer<WOLLogonAction>, public Observer<WWOnli
 		** Cancel request flag.
 		*/
 		bool CancelRequest;
-
-		/*
-		** Game mode. 0 = LAN, 1 = internet.
-		*/
-		int GameMode;
-
-		/*
-		** Reference pointer to WOLSession.
-		*/
-		RefPtr<WWOnline::Session> WOLSession;
-
-		/*
-		** Time we last tried to create the game channel.
-		*/
-		unsigned int LastChannelCreateTime;
-
-		/*
-		** Number of times we tried to create the channel.
-		*/
-		int NumChannelCreateTries;
 
 };
 
