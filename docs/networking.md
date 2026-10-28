@@ -76,7 +76,7 @@ The browser keeps only servers whose `OpenW3D` value equals its own. TT servers 
 ## Known gaps and follow-up work
 
 - Slave servers are disabled (`SlaveMasterClass::Startup_Slaves`). They only ran under WOL, which also gave each slave its own port.
-- The browser dialog has been built but not yet clicked through end to end; an automated click went to the LAN list instead.
+- The browser was checked by hand on 2026-10-28: it reached the master and reported "No OpenW3D servers found (28 listed)". Joining from the list has not been tried yet, because no OpenW3D server is listed.
 - Master listing has not been confirmed from a server with forwarded ports.
 - Menus still say "GameSpy" in places. The quick match, ladder and clan host options are always off but still shown.
 - The old `banlist.txt` hash column is parsed and ignored; hash-only bans no longer match.

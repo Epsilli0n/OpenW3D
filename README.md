@@ -16,9 +16,17 @@ Changes added on top of [w3dhub/OpenW3D](https://github.com/w3dhub/OpenW3D) at `
 - HUD scales with screen resolution (2x at 1080p/1440p, 3x at 2160p, or `HUDScale` in `[RenderDevice]`), with sharp point-sampled bitmap fonts and a square reticle on wide screens
 - Widescreen fixes: dialogs laid out in a centred 4:3 area, menu backdrop keeps its framing
 - Defaults to the desktop resolution on first run instead of 800x600
-- Westwood Online removed (client code, `WWOnline`, `wolapi`, `WOLBrowser`, NAT layer, embedded browser); stock `server.ini` files asking for WOL host on the LAN instead
-- GameSpy SDK and CD key authentication removed; dedicated servers report to the community master servers with our own broadcaster in TT's format, including `SVER=OpenW3D/<version>` and an `OpenW3D` rule (see `docs/networking.md`)
-- In-game internet server browser (Multiplay Internet > GameSpy > Join) that lists only servers the client can join, plus `--connect IP[:PORT]`, `--nickname` and `--password`
+- Online play rebuilt around the community master servers (details in `docs/networking.md`)
+  - Westwood Online removed: WOL client code and dialogs, `WWOnline`, `wolapi` (including `WOLAPI.dll`), `WOLBrowser`, the NAT negotiation layer, the patch downloader and the embedded web browser (`W3D_BUILD_OPTION_WEBBROWSER`)
+  - GameSpy SDK and GameSpy CD key authentication removed; bans still work by nickname and IP
+  - Dedicated servers report to TT's seven community masters with our own broadcaster, in the format TT documents: full `info`, `rules` and `players` replies, `nextmap` and time fields, `SVER=OpenW3D/<version>`, and custom rules from `gamespy_rules.ini`
+  - Servers also report an `OpenW3D` rule carrying the join compatibility key, so OpenW3D clients find each other's servers and skip TT servers they cannot join
+  - In-game internet server browser (Multiplay Internet > GameSpy > Join) replaces the GameSpy Arcade launcher: lists joinable servers with map, players and ping, refreshes with Refresh or F5, prompts for passwords; `OPENW3D_MASTER_SERVERS` points it at other masters
+  - `--connect IP[:PORT]`, `--nickname`, `--password` and `--internetserver` (the old `--gamespy-*` names still work); joining with an explicit port works again
+  - `server.ini` files that ask for WOL (or set no `GameType`) host on the LAN instead of sitting idle
+  - A dedicated server killed mid-game no longer makes the next client launch start hosting
+  - Slave servers are disabled until each one gets its own port
+  - Test: `commando_serverbrowser_tests` checks the list and query handling against a fake master and servers on loopback
 - Benchmarking switches: `W3D_VSYNC=0` and `W3D_RENDER_STATS=1` (D3D12 also logs draws, uploads and GPU frame time)
 - FFmpeg and OpenAL installed through vcpkg (`dev/vcpkg-media`) in the `win` preset, with fallback to the stubs if missing
 - Visual Studio 2026 x64 preset, and MSVC builds require the VS 2026 toolset
