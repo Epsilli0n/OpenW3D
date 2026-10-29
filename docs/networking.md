@@ -74,7 +74,7 @@ The browser keeps only servers whose `OpenW3D` value equals its own. TT servers 
 ## Client
 
 - `--connect IP[:PORT]`, `--nickname NAME`, `--password PASSWORD` join a server directly. The old `--gamespy-connect`, `--gamespy-netplayername` and `--gamespy-password` names still work.
-- Multiplay Internet > GameSpy > Join opens the server browser.
+- Multiplay Internet on the main menu opens the server browser directly. The old WOL/GameSpy choice and GameSpy join/host menus are no longer reachable; hosting an internet game is done with the dedicated server.
 
 ## Known gaps and follow-up work
 

@@ -21,7 +21,7 @@ Changes added on top of [w3dhub/OpenW3D](https://github.com/w3dhub/OpenW3D) at `
   - GameSpy SDK and GameSpy CD key authentication removed; bans still work by nickname and IP
   - Dedicated servers report to TT's seven community masters with our own broadcaster, in the format TT documents: full `info`, `rules` and `players` replies, `nextmap` and time fields, `SVER=OpenW3D/<version>`, and custom rules from `gamespy_rules.ini`
   - Servers also report an `OpenW3D` rule carrying the join compatibility key, so OpenW3D clients find each other's servers and skip TT servers they cannot join
-  - In-game internet server browser (Multiplay Internet > GameSpy > Join) replaces the GameSpy Arcade launcher: lists joinable servers with map, players and ping, refreshes with Refresh or F5, prompts for passwords; `OPENW3D_MASTER_SERVERS` points it at other masters
+  - In-game internet server browser (Multiplay Internet on the main menu opens it directly) replaces the WOL/GameSpy menus and the GameSpy Arcade launcher: lists joinable servers with map, players and ping, refreshes with Refresh or F5, prompts for passwords; `OPENW3D_MASTER_SERVERS` points it at other masters
   - `--connect IP[:PORT]`, `--nickname`, `--password` and `--internetserver` (the old `--gamespy-*` names still work); joining with an explicit port works again
   - `server.ini` files that ask for WOL (or set no `GameType`) host on the LAN instead of sitting idle
   - A dedicated server killed mid-game no longer makes the next client launch start hosting
