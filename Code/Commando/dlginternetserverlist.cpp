@@ -38,6 +38,7 @@
 #include "DlgMPConnect.h"
 #include "DlgPasswordPrompt.h"
 #include "renegadedialog.h"
+#include "renegadedialogmgr.h"
 #include "translatedb.h"
 #include "string_ids.h"
 #include "specialbuilds.h"
@@ -70,6 +71,12 @@ InternetServerListMenuClass::InternetServerListMenuClass (void)	:
 	RefreshPending (false)
 {
 	WWDEBUG_SAY(("InternetServerListMenu instantiated\n"));
+
+	//
+	//	This is the internet entry point now (it used to be the GameSpy menu), so mark the client as being in
+	// the internet menus while it is open. That picks the internet nickname and connection settings.
+	//
+	cGameSpyAdmin::Set_Is_Under_Gamespy_Menuing (true);
 }
 
 
@@ -80,7 +87,21 @@ InternetServerListMenuClass::InternetServerListMenuClass (void)	:
 ////////////////////////////////////////////////////////////////
 InternetServerListMenuClass::~InternetServerListMenuClass (void)
 {
+	cGameSpyAdmin::Set_Is_Under_Gamespy_Menuing (false);
 	WWDEBUG_SAY(("InternetServerListMenu destroyed\n"));
+}
+
+
+////////////////////////////////////////////////////////////////
+//
+//	On_Last_Menu_Ending
+//
+////////////////////////////////////////////////////////////////
+void
+InternetServerListMenuClass::On_Last_Menu_Ending (void)
+{
+	RenegadeDialogMgrClass::Goto_Location (RenegadeDialogMgrClass::LOC_MAIN_MENU);
+	return ;
 }
 
 

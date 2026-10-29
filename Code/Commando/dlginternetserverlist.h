@@ -73,6 +73,7 @@ protected:
 	//	Protected methods
 	////////////////////////////////////////////////////////////////
 	void		On_Frame_Update (void) override;
+	void		On_Last_Menu_Ending (void) override;
 	void		ReceiveSignal (DlgPasswordPrompt &) override;
 
 	void		Start_Refresh (void);

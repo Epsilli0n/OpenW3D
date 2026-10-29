@@ -39,6 +39,7 @@
 #include "dialogmgr.h"
 #include "dialogbase.h"
 #include "dialogtests.h"
+#include "dlginternetserverlist.h"
 #include "renegadedialog.h"
 #include "dlgloadspgame.h"
 #include "dlgevaencyclopedia.h"
@@ -281,9 +282,11 @@ RenegadeDialogMgrClass::Goto_Location (LOCATION location)
 			HelpScreenDialogClass::Display ();
 			break;
 
-		//GAMESPY
+		//
+		//	Back from an internet game: return to the server list.
+		//
 		case LOC_GAMESPY_MAIN:
-			START_DIALOG (GameSpyMainDialogClass);
+			START_DIALOG (InternetServerListMenuClass);
 			break;
 	}
 

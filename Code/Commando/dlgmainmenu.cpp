@@ -67,6 +67,7 @@
 #include "string_ids.h"
 #include "gamespyadmin.h"
 #include "gitinfo.h"
+#include "dlginternetserverlist.h"
 
 ////////////////////////////////////////////////////////////////
 //	Static member initialization
@@ -418,7 +419,11 @@ MainMenuDialogClass::On_Command (int ctrl_id, int message_id, unsigned int param
 			break;
 
 		case IDC_MENU_MP_INTERNET_GAME_BUTTON:
-			START_DIALOG (InternetMainDialogClass);
+			//
+			//	Go straight to the internet server list. The WOL/GameSpy choice and the GameSpy join/host menu
+			// in between are gone.
+			//
+			START_DIALOG (InternetServerListMenuClass);
 			allow_default = false;
 			break;
 
