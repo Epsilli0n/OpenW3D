@@ -27,6 +27,7 @@ Changes added on top of [w3dhub/OpenW3D](https://github.com/w3dhub/OpenW3D) at `
   - A dedicated server killed mid-game no longer makes the next client launch start hosting
   - Client and dedicated server can run at the same time (separate single-instance locks)
   - The dedicated server console works when started from a terminal, not only when double-clicked
+  - Leaving a game joined from the server list returns to the server list, and a player who shares the dedicated server's nickname (same PC, same `openw3d.conf`) is no longer renamed to `Name(1)`
   - Tested end to end: a server behind a router is listed on the community masters, appears in the in-game browser, and clients join it from the list
   - Slave servers removed (the `--slave` option, `[Slave1]`..`[Slave7]` in `server.ini`, the slave server menu and the `quit_slave` console command); run separate dedicated servers instead
   - All dedicated server settings in one `server.ini` (`[Server]`, `[Game]` with the map rotation, `[ListingRules]`); old `svrcfg_cnc.ini` and `gamespy_rules.ini` files are still read, and a commented default `server.ini` is written on first run

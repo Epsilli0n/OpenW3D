@@ -86,6 +86,8 @@ The browser keeps only servers whose `OpenW3D` value equals its own. TT servers 
 
 - `--connect IP[:PORT]`, `--nickname NAME`, `--password PASSWORD` join a server directly. The old `--gamespy-connect`, `--gamespy-netplayername` and `--gamespy-password` names still work.
 - Multiplay Internet on the main menu opens the server browser directly. The old WOL/GameSpy choice and GameSpy join/host menus are no longer reachable; hosting an internet game is done with the dedicated server.
+- "Internet mode" (`cGameSpyAdmin::Is_Gamespy_Game()`) is only true on the client while the server list dialog exists, so it is false during a game joined from the list. Leaving such a game used to show the LAN Game List; `IsJoinedFromServerList` now sends the player back to the server list (cleared when Multiplay LAN is picked).
+- In internet mode the server renames a joining player to `Name(1)` when the name is taken. It used to count the dedicated server's own nickname too, which comes from the shared `openw3d.conf`, so the owner joining their own server from the same PC was always renamed. Only real players count now. Both fixes checked by hand on 2026-10-29.
 
 ## Known gaps and follow-up work
 

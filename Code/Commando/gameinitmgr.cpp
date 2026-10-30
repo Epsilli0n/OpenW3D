@@ -461,7 +461,7 @@ GameInitMgrClass::Display_End_Game_Menu (void)
 		//
 		case MODE_LAN:
 			//GAMESPY
-			if (cGameSpyAdmin::Is_Gamespy_Game()) {
+			if (cGameSpyAdmin::Is_Gamespy_Game() || cGameSpyAdmin::Get_Is_Joined_From_Server_List()) {
 				RenegadeDialogMgrClass::Goto_Location (RenegadeDialogMgrClass::LOC_GAMESPY_MAIN);
 			} else {
 				RenegadeDialogMgrClass::Goto_Location (RenegadeDialogMgrClass::LOC_LAN_MAIN);
