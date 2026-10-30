@@ -471,11 +471,19 @@ bool cGameDataCnc::Is_Gameplay_Permitted(void)
 	if (permitted && Get_Max_Players() > 1)
 	{
 		//
-		// If your maxplayers is set to more than 1 then you must have an opponent.
+		// If your maxplayers is set to more than 1 then you must have an opponent,
+		// unless the server allows play with one team (RequireOpponent = no). Then
+		// one player is enough, so an empty server still waits.
 		//
-		permitted =
-			cPlayerManager::Tally_Team_Size(PLAYERTYPE_NOD) > 0 &&
-			cPlayerManager::Tally_Team_Size(PLAYERTYPE_GDI) > 0;
+		if (RequireOpponent.Is_True()) {
+			permitted =
+				cPlayerManager::Tally_Team_Size(PLAYERTYPE_NOD) > 0 &&
+				cPlayerManager::Tally_Team_Size(PLAYERTYPE_GDI) > 0;
+		} else {
+			permitted =
+				cPlayerManager::Tally_Team_Size(PLAYERTYPE_NOD) > 0 ||
+				cPlayerManager::Tally_Team_Size(PLAYERTYPE_GDI) > 0;
+		}
 	}
 
 	return permitted;

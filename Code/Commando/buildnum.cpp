@@ -75,10 +75,11 @@ unsigned int BuildInfoClass::Get_Network_Version_Number(void)
  *                                                                                             *
  * HISTORY:                                                                                    *
  *   10/29/2026 : Created, revision 0 (adds nothing to the key)                                *
+ *   10/29/2026 : 1 - game settings (tier 2 data) carry RequireOpponent                        *
  *=============================================================================================*/
 unsigned int BuildInfoClass::Get_Protocol_Revision(void)
 {
-	static constexpr unsigned int PROTOCOL_REVISION = 0;
+	static constexpr unsigned int PROTOCOL_REVISION = 1;
 	return (PROTOCOL_REVISION);
 }
 

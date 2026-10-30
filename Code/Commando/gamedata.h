@@ -305,6 +305,7 @@ class	cGameData :
 		cBoolean 		CanRepairBuildings;
 		cBoolean 		DriverIsAlwaysGunner;
 		cBoolean 		SpawnWeapons;
+		cBoolean 		RequireOpponent;		// gameplay waits until both teams have a player
 
 
 		enum {MAX_MAPS = 100};

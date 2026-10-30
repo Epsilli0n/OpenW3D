@@ -461,6 +461,8 @@ static const char DefaultSettingsFile[] =
 	"CanRepairBuildings = yes\r\n"
 	"DriverIsAlwaysGunner = yes\r\n"
 	"SpawnWeapons = no\r\n"
+	"; no lets the game run with players on one team only (gameplay is otherwise pending)\r\n"
+	"RequireOpponent = yes\r\n"
 	"BaseDestructionEndsGame = yes\r\n"
 	"BeaconPlacementEndsGame = yes\r\n"
 	"UseLagReduction = yes\r\n"

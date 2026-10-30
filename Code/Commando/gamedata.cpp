@@ -172,6 +172,7 @@ cGameData::cGameData(void)	:
 	CanRepairBuildings.Set(			true);
 	DriverIsAlwaysGunner.Set(		true);
 	SpawnWeapons.Set(					false);
+	RequireOpponent.Set(				true);
 
 	mWinnerID							= -1;
 	MaxPlayers							= 16;
@@ -235,6 +236,7 @@ cGameData& cGameData::operator=(const cGameData& rhs)
 	CanRepairBuildings				= rhs.CanRepairBuildings;
 	DriverIsAlwaysGunner				= rhs.DriverIsAlwaysGunner;
 	SpawnWeapons						= rhs.SpawnWeapons;
+	RequireOpponent					= rhs.RequireOpponent;
    Password								= rhs.Password;
 	GameTitle							= rhs.GameTitle;
 	Motd									= rhs.Motd;
@@ -907,6 +909,7 @@ void cGameData::Export_Tier_2_Data(cPacket & packet)
 	packet.Add(IsFreeWeapons.Get());
 	packet.Add(IsClientTrusted.Get());
 	packet.Add(RemixTeams.Get());
+	packet.Add(RequireOpponent.Get());
 
 	if (Is_Cnc()) {
 		packet.Add(CanRepairBuildings.Get());
@@ -932,6 +935,7 @@ void cGameData::Import_Tier_2_Data(cPacket & packet)
 	IsFreeWeapons.Set(							packet.Get(b_placeholder));
 	IsClientTrusted.Set(							packet.Get(b_placeholder));
 	RemixTeams.Set(								packet.Get(b_placeholder));
+	RequireOpponent.Set(							packet.Get(b_placeholder));
 
 	if (Is_Cnc()) {
 		CanRepairBuildings.Set(					packet.Get(b_placeholder));
@@ -1063,6 +1067,9 @@ void cGameData::Load_From_Server_Config(const char * config_file)
 	b = p_ini->Get_Bool(	INI_SECTION_NAME, "SpawnWeapons",				SpawnWeapons.Get());
 	SpawnWeapons.Set(b);
 
+	b = p_ini->Get_Bool(	INI_SECTION_NAME, "RequireOpponent",			RequireOpponent.Get());
+	RequireOpponent.Set(b);
+
 	//
 	// Disguise "IsClientTrusted" with something that sounds like you need it but
 	// that doesn't scream "hack me"
@@ -1150,6 +1157,7 @@ void cGameData::Save_To_Server_Config(const char * config_file)
 	p_ini->Put_Bool(			INI_SECTION_NAME, "CanRepairBuildings",		CanRepairBuildings.Get());
 	p_ini->Put_Bool(			INI_SECTION_NAME, "DriverIsAlwaysGunner",		DriverIsAlwaysGunner.Get());
 	p_ini->Put_Bool(			INI_SECTION_NAME, "SpawnWeapons",				SpawnWeapons.Get());
+	p_ini->Put_Bool(			INI_SECTION_NAME, "RequireOpponent",			RequireOpponent.Get());
 	//p_ini->Put_Bool(			INI_SECTION_NAME, "IsClientTrusted",			IsClientTrusted.Get());
 	p_ini->Put_Bool(			INI_SECTION_NAME, "UseLagReduction",			IsClientTrusted.Get());
    p_ini->Put_Wide_String(	INI_SECTION_NAME, "wGameTitle",					Get_Game_Title());
