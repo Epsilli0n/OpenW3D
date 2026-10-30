@@ -30,6 +30,7 @@ Changes added on top of [w3dhub/OpenW3D](https://github.com/w3dhub/OpenW3D) at `
   - Tested end to end: a server behind a router is listed on the community masters, appears in the in-game browser, and clients join it from the list
   - Slave servers removed (the `--slave` option, `[Slave1]`..`[Slave7]` in `server.ini`, the slave server menu and the `quit_slave` console command); run separate dedicated servers instead
   - All dedicated server settings in one `server.ini` (`[Server]`, `[Game]` with the map rotation, `[ListingRules]`); old `svrcfg_cnc.ini` and `gamespy_rules.ini` files are still read, and a commented default `server.ini` is written on first run
+  - `RequireOpponent = no` in the server's game settings lets a game run with a single player instead of waiting at "Gameplay is pending" for the other team
   - The dedicated server no longer runs console commands sent by clients
   - The server checks client input: clients can no longer act as other players (chat, disconnect, team change, money, kills), steer other players' soldiers, update or delete server objects, report damage for anything but their own soldier, or crash the server with unknown object types
   - Test: `commando_serverbrowser_tests` checks the list and query handling against a fake master and servers on loopback
