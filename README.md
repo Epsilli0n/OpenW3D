@@ -31,6 +31,7 @@ Changes added on top of [w3dhub/OpenW3D](https://github.com/w3dhub/OpenW3D) at `
   - Slave servers removed (the `--slave` option, `[Slave1]`..`[Slave7]` in `server.ini`, the slave server menu and the `quit_slave` console command); run separate dedicated servers instead
   - All dedicated server settings in one `server.ini` (`[Server]`, `[Game]` with the map rotation, `[ListingRules]`); old `svrcfg_cnc.ini` and `gamespy_rules.ini` files are still read, and a commented default `server.ini` is written on first run
   - The dedicated server no longer runs console commands sent by clients
+  - The server checks client input: clients can no longer act as other players (chat, disconnect, team change, money, kills), steer other players' soldiers, update or delete server objects, report damage for anything but their own soldier, or crash the server with unknown object types
   - Test: `commando_serverbrowser_tests` checks the list and query handling against a fake master and servers on loopback
 - Benchmarking switches: `W3D_VSYNC=0` and `W3D_RENDER_STATS=1` (D3D12 also logs draws, uploads and GPU frame time)
 - FFmpeg and OpenAL installed through vcpkg (`dev/vcpkg-media`) in the `win` preset, with fallback to the stubs if missing
