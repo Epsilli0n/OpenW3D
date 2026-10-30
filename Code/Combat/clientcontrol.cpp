@@ -164,14 +164,15 @@ CClientControl::Import_Frequent(BitStreamClass & packet)
 		SmartGameObj * p_smart_go = GameObjManager::Find_SmartGameObj(SmartObjId);
 		//WWASSERT(p_smart_go != nullptr);
 
-		if (p_smart_go == nullptr) {
+		//
+		//	Clients only send control for the soldier they own (SmartGameObj::Generate_Control),
+		// and vehicles take their control from the driver soldier. Ignore control for anything
+		// else, such as other players' soldiers.
+		//
+		if (p_smart_go == nullptr || p_smart_go->Get_Control_Owner() != Get_Import_Owner()) {
 			packet.Flush();
 		} else {
 			p_smart_go->Import_Control_Cs(packet);
-
-			//
-			// Note: org code had control owner test here, reapply if problems arise.
-			//
 			p_smart_go->Import_State_Cs(packet);
 		}
 	}
