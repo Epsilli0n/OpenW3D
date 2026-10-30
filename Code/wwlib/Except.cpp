@@ -252,6 +252,38 @@ static void Add_Txt (char const *txt)
 
 
 /***********************************************************************************************
+ * Format_Module_Offset -- Describe a code address as module+offset                            *
+ *                                                                                             *
+ *    Offsets stay valid across runs (ASLR moves the base), so they can be looked up later     *
+ *    with the .pdb, for example: llvm-symbolizer --obj=renegade.exe --relative-address 0x...   *
+ *                                                                                             *
+ * INPUT:    address, output buffer and its size                                               *
+ *                                                                                             *
+ * OUTPUT:   Nothing                                                                           *
+ *                                                                                             *
+ * WARNINGS: None                                                                              *
+ *                                                                                             *
+ * HISTORY:                                                                                    *
+ *   10/29/2026 : Created                                                                      *
+ *=============================================================================================*/
+static void Format_Module_Offset(void *address, char *buffer, size_t size)
+{
+	HMODULE module = nullptr;
+	char path[_MAX_PATH] = "?";
+
+	if (GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+			(LPCSTR)address, &module) && module != nullptr) {
+		GetModuleFileNameA(module, path, sizeof(path));
+		const char *name = strrchr(path, '\\');
+		name = (name != nullptr) ? name + 1 : path;
+		snprintf(buffer, size, "%s+0x%" PRIXPTR, name, (uintptr_t)address - (uintptr_t)module);
+	} else {
+		snprintf(buffer, size, "%p", address);
+	}
+}
+
+
+/***********************************************************************************************
  * Dump_Exception_Info -- Dump machine state information into a buffer                         *
  *                                                                                             *
  *                                                                                             *
@@ -469,6 +501,14 @@ void Dump_Exception_Info(EXCEPTION_POINTERS *e_info)
 
 	Add_Txt (scrap);
 
+	{
+		char where[512];
+		Format_Module_Offset((void *)context->ARCH_REG_IP, where, sizeof(where));
+		Add_Txt("Exception module offset: ");
+		Add_Txt(where);
+		Add_Txt("\r\n");
+	}
+
 	/*
 	** Try to walk the stack. It might work....
 	*/
@@ -487,6 +527,14 @@ void Dump_Exception_Info(EXCEPTION_POINTERS *e_info)
 				Add_Txt("  ");
 			}
 
+			//
+			// Always print module+offset so the frame can be looked up later against the
+			// matching .pdb, then the symbol name when it is available here.
+			//
+			char symbuf[512];
+			Format_Module_Offset(temp_addr, symbuf, sizeof(symbuf));
+			Add_Txt(symbuf);
+
 			if (symbols_available) {
 				symptr->SizeOfStruct = sizeof(symbol);
 				symptr->MaxNameLength = 128;
@@ -494,15 +542,11 @@ void Dump_Exception_Info(EXCEPTION_POINTERS *e_info)
 				symptr->Address = (DWORD_ARCH)temp_addr;
 
 				if (_SymGetSymFromAddr != nullptr && _SymGetSymFromAddr (GetCurrentProcess(), (DWORD_ARCH)temp_addr, &displacement, symptr)) {
-					char symbuf[256];
-					sprintf(symbuf, "%s + %08" PRIXPTR "\r\n", symptr->Name, displacement);
+					sprintf(symbuf, "  %s + %08" PRIXPTR, symptr->Name, displacement);
 					Add_Txt(symbuf);
 				}
-			} else {
-				char symbuf[256];
-				sprintf(symbuf, "%08" PRIXPTR "\r\n", (DWORD_ARCH)temp_addr);
-				Add_Txt(symbuf);
 			}
+			Add_Txt("\r\n");
 		}
 
 		Add_Txt("\r\n\r\n");
@@ -736,10 +780,14 @@ void Dump_Exception_Info(EXCEPTION_POINTERS *e_info)
 	*/
 	DebugString("Stack dump...\n");
 	Add_Txt("Stack dump (* indicates possible code address) :\r\n");
-	unsigned int *stackptr = (unsigned int*) context->ARCH_REG_STACK;
+	//
+	// Stack slots are pointer sized. Reading 4 bytes at a time on x64 checked only half of each
+	// 8 byte read, so the dump itself faulted near the top of the stack.
+	//
+	uintptr_t *stackptr = (uintptr_t*) context->ARCH_REG_STACK;
 
 	for (int j=0 ; j<2048 ; j++) {
-		if (IsBadReadPtr(stackptr, 4)) {
+		if (IsBadReadPtr(stackptr, sizeof(*stackptr))) {
 			/*
 			** The stack contents cannot be read so just print up question marks.
 			*/
@@ -749,11 +797,11 @@ void Dump_Exception_Info(EXCEPTION_POINTERS *e_info)
 			/*
 			** If this stack address is in our memory space then try to match it with a code symbol.
 			*/
-			if (IsBadCodePtr(*(FARPROC*)stackptr)) {
-				sprintf(scrap, "%8p: %08X ", stackptr, *stackptr);
+			if (IsBadCodePtr((FARPROC)*stackptr)) {
+				sprintf(scrap, "%8p: %0*" PRIXPTR " ", stackptr, (int)(2 * sizeof(*stackptr)), *stackptr);
 				strcat(scrap, "DATA_PTR\r\n");
 			} else {
-				sprintf(scrap, "%8p: %08X", stackptr, *stackptr);
+				sprintf(scrap, "%8p: %0*" PRIXPTR, stackptr, (int)(2 * sizeof(*stackptr)), *stackptr);
 
 				if (symbols_available) {
 					symptr->SizeOfStruct = sizeof(symbol);
@@ -801,6 +849,49 @@ void Dump_Exception_Info(EXCEPTION_POINTERS *e_info)
 
 
 
+
+
+/***********************************************************************************************
+ * Write_Mini_Dump -- Write _except.dmp for the exception                                      *
+ *                                                                                             *
+ *    Open the file in Visual Studio (or WinDbg) next to the matching .pdb to see the crash.    *
+ *                                                                                             *
+ * INPUT:    pointer to exception information pointers                                         *
+ *                                                                                             *
+ * OUTPUT:   Nothing                                                                           *
+ *                                                                                             *
+ * WARNINGS: None                                                                              *
+ *                                                                                             *
+ * HISTORY:                                                                                    *
+ *   10/29/2026 : Created                                                                      *
+ *=============================================================================================*/
+static void Write_Mini_Dump(EXCEPTION_POINTERS *e_info)
+{
+	typedef BOOL (WINAPI *MiniDumpWriteDumpType) (HANDLE hProcess, DWORD ProcessId, HANDLE hFile, MINIDUMP_TYPE DumpType,
+		PMINIDUMP_EXCEPTION_INFORMATION ExceptionParam, PMINIDUMP_USER_STREAM_INFORMATION UserStreamParam,
+		PMINIDUMP_CALLBACK_INFORMATION CallbackParam);
+
+	HMODULE dbghelp = LoadLibraryA("dbghelp.dll");
+	if (dbghelp == nullptr) {
+		return;
+	}
+
+	MiniDumpWriteDumpType write_dump = reinterpret_cast<MiniDumpWriteDumpType>(GetProcAddress(dbghelp, "MiniDumpWriteDump"));
+	if (write_dump != nullptr) {
+		HANDLE dump_file = CreateFileA("_except.dmp", GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+		if (dump_file != INVALID_HANDLE_VALUE) {
+			MINIDUMP_EXCEPTION_INFORMATION info;
+			info.ThreadId = GetCurrentThreadId();
+			info.ExceptionPointers = e_info;
+			info.ClientPointers = FALSE;
+			write_dump(GetCurrentProcess(), GetCurrentProcessId(), dump_file,
+				(MINIDUMP_TYPE)(MiniDumpWithIndirectlyReferencedMemory | MiniDumpWithDataSegs), &info, nullptr, nullptr);
+			CloseHandle(dump_file);
+		}
+	}
+
+	FreeLibrary(dbghelp);
+}
 
 
 /***********************************************************************************************
@@ -858,6 +949,11 @@ int Exception_Handler(int exception_code, EXCEPTION_POINTERS *e_info)
 #endif //WWDEBUG
 
 	if (ExceptionRecursions == 0) {
+
+		/*
+		** Write a minidump first. It holds the real fault even if the text report below fails.
+		*/
+		Write_Mini_Dump(e_info);
 
 		/*
 		** Create a dump of the exception info.
