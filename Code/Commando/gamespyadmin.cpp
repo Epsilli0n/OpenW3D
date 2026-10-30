@@ -240,13 +240,12 @@ cGameSpyAdmin::Is_Nickname_Collision
 	WWASSERT(!nickname.Is_Empty());
 	WWASSERT(cNetwork::I_Am_Server());
 
-	bool collides = (cPlayerManager::Find_Player(nickname) != nullptr);
-	if (cNetwork::I_Am_Only_Server())
-	{
-		collides |= !nickname.Compare_No_Case(cNetInterface::Get_Nickname());
-	}
-
-	return collides;
+	//
+	// Only real players count. A dedicated server has no player of its own, and its nickname
+	// comes from the openw3d.conf it shares with the client, so it is usually the name of
+	// whoever plays on this machine.
+	//
+	return (cPlayerManager::Find_Player(nickname) != nullptr);
 }
 
 
