@@ -87,7 +87,7 @@ Key hooks, emote icons over players and drops, HUD messages, per-player sounds, 
    - Layered server settings file (general, per map, per mode) reloaded each map.
    - Structured log stream for bots: gamelog in SSGM's format over TCP, so BRenBot-style bots work unchanged.
    - Admin commands: kick and ban with reasons, ban database, mute, coloured messages, pages, team messages, remix, rebalance, swap, force team, reload level.
-   - Slave servers with their own ports (already on the FDS list).
+   - Slave servers: dropped and removed from the code; run separate dedicated servers instead.
 2. **Server gameplay features** (no client changes): points distribution, spawn protection, character refunds, donate and `!donate`, request team change, team rebalance, building health reports, advanced kill messages, vehicle and C4 limits, fake beacon blocking, refinery amounts, disable lists, infinite ammo, then crates, loot, vehicle queue and ownership, game modes (Marathon, Infantry, Sniping, Domination).
 3. **Client and protocol features**:
    - Map and package downloader.

@@ -52,7 +52,6 @@
 #include "useroptions.h"
 #include "campaign.h"
 #include "specialbuilds.h"
-#include "dlgmpslaveservers.h"
 #include "dlgserversaveload.h"
 #include "modpackagemgr.h"
 #include "modpackage.h"
@@ -192,7 +191,6 @@ MPLanHostOptionsMenuClass::On_Command (int ctrl_id, int message_id, unsigned int
 								}
 							}
 
-							SlaveMaster.Startup_Slaves();
 							Start_Game(The_Game());
 						} else {
 							WideStringClass errorMsg(0, true);
@@ -213,7 +211,6 @@ MPLanHostOptionsMenuClass::On_Command (int ctrl_id, int message_id, unsigned int
 				//
 				if (tab_ctrl->Apply_Changes_On_Tabs()) {
 					End_Dialog();
-					ServerSaveLoadMenuClass::Set_From_Slave_Config(false);
 					START_DIALOG(ServerSaveLoadMenuClass);
 				}
 			}
@@ -553,8 +550,6 @@ MPLanHostAdvancedOptionsTabClass::On_Init_Dialog (void)
 		Enable_Dlg_Item(IDC_SERVER_RESTART_CHECK, false);
 	}
 
-	Enable_Dlg_Item(IDC_MENU_MP_LAN_SLAVE_SERVER_BUTTON, false);
-
 	//
 	//	Fill in the Motd control
 	//
@@ -629,17 +624,6 @@ MPLanHostAdvancedOptionsTabClass::On_Command (int ctrl_id, int /* message_id */,
 #endif // MULTIPLAYERDEMO
 		}
 		break;
-
-		//
-		// Bring up the slave server config dialog.
-		//
-		case IDC_MENU_MP_LAN_SLAVE_SERVER_BUTTON:
-			if (WW3D::Is_Windowed()) {
-				START_DIALOG(SlaveServerDialogClass);
-			} else {
-				DlgMsgBox::DoDialog(IDS_MENU_TEXT329, IDS_SLAVES_NEED_WINDOWED, DlgMsgBox::Okay);
-			}
-			break;
 	}
 }
 

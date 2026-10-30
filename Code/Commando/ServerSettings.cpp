@@ -36,7 +36,6 @@
 
 
 #include "ServerSettings.h"
-#include "slavemaster.h"
 #include "wwdebug.h"
 #include <limits>
 #include "gamedata.h"
@@ -62,9 +61,6 @@
 
 const char *ConfigSettingsName = "Config";
 const char *MasterServerSection = "Server";
-const char *SlaveServerSection = "Slave";
-
-#define ENCRYPTION_STRING_LENGTH				128
 
 char ServerSettingsClass::SettingsFile[MAX_PATH];
 bool ServerSettingsClass::IsActive = false;
@@ -119,13 +115,6 @@ void ServerSettingsClass::Set_Settings_File_Name(char *filename)
 bool ServerSettingsClass::Parse(bool apply)
 {
 	char master_settings[MAX_PATH];
-	char slave_settings[MAX_PATH];
-	char slave_section[256];
-	char slave_nick[128];
-	char slave_serial[128];
-	char slave_pass[128];
-	int slave_port;
-	int slave_bw;
 	int master_bw;
 	char remote_admin_pass[128];
 	char game_type[32];
@@ -397,204 +386,8 @@ bool ServerSettingsClass::Parse(bool apply)
 				}
 			}
 		//}
-
-
-
-		if (apply) {
-			SlaveMaster.Reset();
-		}
-
-		/*
-		** Read the slave server info.
-		*/
-		for (int i=0 ; i<MAX_SLAVES ; i++) {
-
-			slave_settings[0] = 0;
-			slave_nick[0] = 0;
-			slave_serial[0] = 0;
-			slave_port = 0;
-			slave_bw = 0xffffffff;
-
-			/*
-			** See if this slave is enabled in the .ini
-			*/
-			sprintf(slave_section, "%s%d", SlaveServerSection, i+1);
-			bool enabled = ini.Get_Bool(slave_section, "Enable", false);
-
-			if (enabled) {
-
-				/*
-				** Make sure the slaves config file is present.
-				*/
-				ini.Get_String(slave_section, ConfigSettingsName, "", slave_settings, sizeof(slave_settings));
-				if (strlen(slave_settings) != 0) {
-					sprintf(filename, "data\\%s", slave_settings);
-					file.Set_Name(filename);
-					if (!file.Is_Available()) {
-						WWDEBUG_SAY(("Slave server settings file '%s' not found\n", filename));
-						ConsoleBox.Print("Error - Slave server settings file '%s' not found - aborting\n", filename);
-						ConsoleBox.Wait_For_Keypress();;
-						return(false);
-					} else {
-						if (!Check_Game_Settings_File(slave_settings)) {
-							WWDEBUG_SAY(("Server settings file '%s' not usable\n", slave_settings));
-							ConsoleBox.Print("Error - server settings file '%s' contains errors - aborting\n", slave_settings);
-							ConsoleBox.Wait_For_Keypress();;
-							return(false);
-						}
-					}
-				}
-
-				/*
-				** Optional slave name and serial.
-				*/
-				ini.Get_String(slave_section, "Nickname", "", slave_nick, sizeof(slave_nick));
-				ini.Get_String(slave_section, "Serial", "", slave_serial, sizeof(slave_serial));
-
-				/*
-				** Get the password.
-				*/
-				ini.Get_String(slave_section, "Password", "", slave_pass, sizeof(slave_pass));
-
-				/*
-				** Get the port number.
-				*/
-				slave_port = ini.Get_Int(slave_section, "Port", 0);
-
-				if (slave_port < 0 || slave_port > 0xffff) {
-					WWDEBUG_SAY(("Error - Invalid port number %d specified for slave %d - aborting\n", slave_port, i+1));
-					ConsoleBox.Print("Error - Invalid port number %d specified for slave %d - aborting\n", slave_port, i+1);
-					ConsoleBox.Wait_For_Keypress();;
-					return(false);
-				}
-
-				/*
-				** Get the bandwidth allowance.
-				*/
-				slave_bw = ini.Get_Int(slave_section, "BandwidthUp", 0xffffffff);
-				if (slave_bw != 0 && slave_bw != 0xffffffff && slave_bw < 33600) {
-					WWDEBUG_SAY(("Error - Insufficient bandwidth specified for slave %d - aborting\n", i+1));
-					ConsoleBox.Print("Error - Insufficient bandwidth specified for slave %d - aborting\n", i+1);
-					ConsoleBox.Wait_For_Keypress();;
-					return(false);
-				}
-			}
-
-			/*
-			** Apply the settings.
-			*/
-			if (apply) {
-				SlaveMaster.Add_Slave(enabled, slave_nick, slave_serial, (unsigned short)slave_port, slave_settings, slave_bw, slave_pass);
-			}
-		}
-		if (apply) {
-			SlaveMaster.Save();
-		}
 	}
 	return(true);
-}
-
-
-
-
-
-
-/***********************************************************************************************
- * ServerSettingsClass::Encrypt_Serial -- Serial number encryption/decryption                  *
- *                                                                                             *
- *                                                                                             *
- *                                                                                             *
- * INPUT:    Input serial number                                                               *
- *           Reference to output serial number                                                 *
- *           Encrypt flag - true to encrypt, false to decrypt                                  *
- *                                                                                             *
- * OUTPUT:   Nothing                                                                           *
- *                                                                                             *
- * WARNINGS: None                                                                              *
- *                                                                                             *
- * HISTORY:                                                                                    *
- *   2/1/2002 12:08PM ST : Created                                                             *
- *=============================================================================================*/
-void ServerSettingsClass::Encrypt_Serial(StringClass serial_in, StringClass &serial_out, bool encrypt)
-{
-	char *s;
-	const size_t numberlength = serial_in.Get_Length();
-	DWORD bytesread;
-	char stringbuffer[ENCRYPTION_STRING_LENGTH];
-	size_t p;
-
-	WWASSERT(numberlength);
-
-	s = new char [numberlength + 1];
-	memcpy(s, serial_in.Peek_Buffer(), numberlength + 1);
-
-	/*
-	** See if the key file is available. If not, don't bother encrypting.
-	*/
-	HANDLE handle = CreateFileA ("woldata.key", GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, nullptr);
-	if (handle == INVALID_HANDLE_VALUE) {
-		delete [] s;
-		serial_out = serial_in;
-		return;
-	}
-
-	/*
-	** Read the key.
-	*/
-	if (!ReadFile(handle, stringbuffer, sizeof (stringbuffer), &bytesread, nullptr)) {
-		WWDEBUG_SAY(("Unable to read serial encryption key file\n"));
-		delete [] s;
-		serial_out = serial_in;
-		return;
-	}
-
-	int sign = encrypt ? 1 : -1;
-
-	p = 0;
-	for (unsigned i = 0; i < ENCRYPTION_STRING_LENGTH; i++) {
-
-		int  t;
-		char c;
-
-		t  = s[p] - '0';
-		t %= 10;
-		t += (sign * stringbuffer[i]);
-		t += 1000;
-		t %= 10;
-		c  = char(t + '0');
-		s[p] = c;
-		p++;
-		if (p == numberlength) {
-			p = 0;
-		}
-	}
-
-	serial_out = StringClass(s, true);
-
-	delete [] s;
-}
-
-
-
-
-/***********************************************************************************************
- * ServerSettingsClass::Decrypt_Serial -- Serial number decryption                             *
- *                                                                                             *
- *                                                                                             *
- *                                                                                             *
- * INPUT:    Input serial number                                                               *
- *           Reference to output serial number                                                 *
- *                                                                                             *
- * OUTPUT:   Nothing                                                                           *
- *                                                                                             *
- * WARNINGS: None                                                                              *
- *                                                                                             *
- * HISTORY:                                                                                    *
- *   2/1/2002 12:08PM ST : Created                                                             *
- *=============================================================================================*/
-void ServerSettingsClass::Decrypt_Serial(StringClass serial_in, StringClass &serial_out)
-{
-	Encrypt_Serial(serial_in, serial_out, false);
 }
 
 

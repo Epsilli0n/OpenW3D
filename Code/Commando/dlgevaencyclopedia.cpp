@@ -55,7 +55,6 @@
 #include "WWAudio.h"
 #include "dlghelpscreen.h"
 #include "crandom.h"
-#include "slavemaster.h"
 #include "string_ids.h"
 #include "translatedb.h"
 
@@ -301,27 +300,12 @@ EVAEncyclopediaMenuClass::HandleNotification (DlgMsgBoxEvent &event)
 void
 EVAEncyclopediaMenuClass::Exit_Game (void)
 {
-	bool stop = false;
-	if (GameModeManager::Find("LAN")->Is_Active()) {
-		if (cNetwork::I_Am_Server() && The_Game() && The_Game()->IsDedicated.Is_True() && SlaveMaster.Am_I_Slave()) {
-			stop = true;
-		}
-	}
-
 	//
 	//	Close the dialog
 	//
 	End_Dialog ();
 
 	GameInitMgrClass::End_Game();
-
-	//
-	// Dedicated slave servers should just quit here.
-	//
-	if (stop) {
-		extern void Stop_Main_Loop (int exitCode);
-		Stop_Main_Loop (EXIT_SUCCESS);
-	}
 	GameInitMgrClass::Display_End_Game_Menu();
 	return ;
 }

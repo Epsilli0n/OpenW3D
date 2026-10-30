@@ -82,7 +82,6 @@ public:
 	void		On_EditCtrl_Enter_Pressed (EditCtrlClass *edit_ctrl, int ctrl_id) override;
 	void		Save_Now(void);
 
-	static void Set_From_Slave_Config(bool set) {FromSlaveConfig = set;}
 	static void Next_Dialog(void);
 
 private:
@@ -100,8 +99,6 @@ private:
 	void		Save_Config (bool prompt);
 	int		Insert_Configuration (ServerSettingsClass *config);
 	void		HandleNotification (DlgMsgBoxEvent &event) override;
-
-	static	bool FromSlaveConfig;
 
 	bool		YesNo;
 };

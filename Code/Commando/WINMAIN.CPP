@@ -89,7 +89,6 @@
 #include "AutoStart.h"
 #include "ConsoleMode.h"
 #include "specialbuilds.h"
-#include "slavemaster.h"
 
 #include "ServerSettings.h"
 #include "openw3d.h"
@@ -202,7 +201,7 @@ int main(int argc, char *argv[])
 	// There's a couple of options we need for the FDS
 	//
 #ifdef FREEDEDICATEDSERVER
-	if (!SlaveMaster.Am_I_Slave() && !ServerSettingsClass::Is_Server_Settings_File_Set()) {
+	if (!ServerSettingsClass::Is_Server_Settings_File_Set()) {
 		cUserOptions::Set_Server_INI_File("server.ini");
 	}
 	ConsoleBox.Set_Exclusive(true);

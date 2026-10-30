@@ -69,6 +69,7 @@ The browser keeps only servers whose `OpenW3D` value equals its own. TT servers 
 - The client and server share `openw3d.conf`. `AutoRestartFlag` there is only honoured when a server settings file is in use. Client and server use separate single-instance locks, so both can run at once.
 - The server name comes from `bGameTitle` (or `wGameTitle`, which wins) in the game settings file named by `Config`, not from a `GameTitle` key.
 - Double-clicked, the server opens its own console. Started from a terminal, it uses that terminal.
+- Slave servers (a master server spawning up to seven child servers from `[Slave1]`..`[Slave7]` in `server.ini`) are removed: `SlaveMasterClass`, the slave server menu, `--slave`, `quit_slave` and the `woldata.key` serial encryption are gone. They only ran under WOL, which gave each slave its own port. To host several games, run several dedicated servers with their own ports. `[SlaveN]` sections in old `server.ini` files are ignored.
 - Confirmed end to end on 2026-10-28: a `GameType = GameSpy` server behind a router with UDP 4848 and 25300 forwarded got `heartbeat result 0 (listed)`, appeared on `renmaster.cncirc.net` and `gamespy.tiberiantechnologies.org`, showed up in the in-game browser, and the client joined it from the list with its nickname; chat worked both ways.
 
 ## Client
@@ -78,7 +79,6 @@ The browser keeps only servers whose `OpenW3D` value equals its own. TT servers 
 
 ## Known gaps and follow-up work
 
-- Slave servers are disabled (`SlaveMasterClass::Startup_Slaves`). They only ran under WOL, which also gave each slave its own port.
 - Only one machine has tested the full loop so far: an OpenW3D server and client behind the same router (NAT loopback), not two separate machines.
 - Menus still say "GameSpy" in places. The quick match, ladder and clan host options are always off but still shown.
 - The old `banlist.txt` hash column is parsed and ignored; hash-only bans no longer match.

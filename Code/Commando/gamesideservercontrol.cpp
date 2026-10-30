@@ -44,7 +44,6 @@
 #include "servercontrol.h"
 #include "gamemode.h"
 #include "buildnum.h"
-#include "slavemaster.h"
 #include "ConsoleMode.h"
 
 #include <string.h>
@@ -81,7 +80,7 @@ void GameSideServerControlClass::Init(void)
 		/*
 		** Only for dedicated servers.
 		*/
-		if (SlaveMaster.Am_I_Slave() || (The_Game() && The_Game()->IsDedicated.Is_True()) || ConsoleBox.Is_Exclusive()) {
+		if ((The_Game() && The_Game()->IsDedicated.Is_True()) || ConsoleBox.Is_Exclusive()) {
 
 			/*
 			** Get the port number from the registry.
@@ -91,12 +90,9 @@ void GameSideServerControlClass::Init(void)
 			if (port != 0) {
 
 				/*
-				** See if we should only bind to the loopback address (for slaves).
+				** See if we should only bind to the loopback address.
 				*/
 				int loopback = reg.Get_Int(SERVER_CONTROL_LOOPBACK_KEY, 0);
-				if (SlaveMaster.Am_I_Slave()) {
-					ServerControl.Allow_Remote_Admin((loopback == 0) ? true : false);
-				}
 
 				/*
 				** Get the bind IP from the registry.
@@ -142,20 +138,12 @@ void GameSideServerControlClass::Init(void)
  *=============================================================================================*/
 void GameSideServerControlClass::Set_Welcome_Message(void)
 {
-	char buffer[1024];
-	buffer[0] = 0;
 	char welcome[1024];
 
 	/*
 	** Basic welcome message includes build info.
 	*/
 	sprintf(welcome, "Welcome to Renegade %s\n", BuildInfoClass::Composite_Build_Info());
-
-	/*
-	** Get the slave info and add it into the welcome message.
-	*/
-	SlaveMaster.Get_Slave_Info(buffer, sizeof(buffer));
-	strcat(welcome, buffer);
 	welcome[499] = 0;
 
 	ServerControl.Set_Welcome_Message(welcome);

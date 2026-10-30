@@ -47,7 +47,6 @@
 #include "string_ids.h"
 #include "fromaddress.h"
 #include "DlgMPConnect.h"
-#include "slavemaster.h"
 #include "dlgmpchangelannickname.h"
 #include "gamespyadmin.h"
 #include "demosupport.h"

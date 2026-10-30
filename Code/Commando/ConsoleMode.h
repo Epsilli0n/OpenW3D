@@ -85,12 +85,11 @@ class ConsoleModeClass
 		void Handle_Profile_Key(int key);
 
 		/*
-		** Master/Slave console window settings/support.
+		** Console window settings/support.
 		*/
 		void Set_Exclusive(bool set) {IsExclusive = set;}
 		bool Is_Exclusive(void) {return(IsExclusive);}
-		HWND Get_Slave_Window_By_Title(char *name, char *settings);
-		StringClass Compose_Window_Title(char *name, char *settings, bool slave);
+		StringClass Compose_Window_Title(char *name, char *settings);
 		void cprintf(char const * string, ...) OPENW3D_PRINTF_VARARG_FUNC(2);
 
 		/*

@@ -103,8 +103,6 @@ set(COMMANDO_SRC
     netinterface.h
     ServerSettings.cpp
     ServerSettings.h
-    slavemaster.cpp
-    slavemaster.h
     apppacketstats.cpp
     apppacketstats.h
     bandwidth.cpp
@@ -232,7 +230,6 @@ set(COMMANDO_SRC
     dlginternetserverlist.h
     dlgmplanhostoptions.cpp
     dlgmplanhostoptions.h
-    dlgmpslaveservers.cpp
     DlgMPTeamSelect.cpp
     DlgMPTeamSelect.h
     dlgmultiplayoptions.cpp

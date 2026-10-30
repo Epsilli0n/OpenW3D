@@ -148,7 +148,6 @@
 #include "gamesideservercontrol.h"
 #include "AutoStart.h"
 #include "Except.h"
-#include "slavemaster.h"
 #include "donateevent.h"
 #include "ConsoleMode.h"
 #include "dlgcncpurchasemainmenu.h"
@@ -3736,11 +3735,7 @@ class QuitConsoleFunctionClass : public ConsoleFunctionClass {
 public:
 	virtual	const char * Get_Name( void ) override	{ return "quit"; }
 	virtual	const char * Get_Help( void ) override	{
-		if (!SlaveMaster.Am_I_Slave()) {
-			return ("QUIT - End game and quit to desktop (dedicated server only).\n");
-		} else {
-			return ("QUIT - End game and restart slave server.\nTo exit without restarting use 'QUIT_SLAVE' on master server\n");
-		}
+		return ("QUIT - End game and quit to desktop (dedicated server only).\n");
 	}
 	virtual	void Activate( const char * /* input */ ) override {
 
@@ -3752,11 +3747,6 @@ public:
 			} else {
 				if (cNetwork::I_Am_Server()) {
 					if (The_Game() && The_Game()->IsDedicated.Is_True()) {
-
-						if (!SlaveMaster.Am_I_Slave()) {
-         				Print("Terminating slaves on demand...\n");
-							SlaveMaster.Shutdown_Slaves();
-						}
 
          			Print("Terminating game on demand...\n");
 						AutoRestart.Set_Restart_Flag(false);
@@ -3781,39 +3771,6 @@ public:
       }
 	}
 };
-
-
-
-
-//
-// REQUIRED for shipping dedicated server.
-//
-class QuitSlaveConsoleFunctionClass : public ConsoleFunctionClass {
-public:
-	virtual	const char * Get_Name( void ) override	{ return "quit_slave"; }
-	virtual	const char * Get_Help( void ) override	{ return "QUIT_SLAVE slavename - Shutdown a slave server (dedicated master server only)."; }
-	virtual	void Activate( const char * input ) override {
-
-		if (!IS_MISSION) {
-			if (cNetwork::I_Am_Server()) {
-				if (The_Game() && The_Game()->IsDedicated.Is_True()) {
-
-					if (!SlaveMaster.Am_I_Slave()) {
-         			Print("Terminating slave %s on demand...\n", input);
-						if (SlaveMaster.Shutdown_Slave((char*)input)) {
-         				Print("Slave %s terminated\n", input);
-						} else {
-         				Print("Slave %s not found\n", input);
-						}
-						return;
-					}
-				}
-			}
-		}
-      Print("QUIT_SLAVE is for dedicated master server only.\n");
-	}
-};
-
 
 
 
@@ -4145,11 +4102,6 @@ public:
 			} else {
 				if (cNetwork::I_Am_Server()) {
 					if (The_Game() && The_Game()->IsDedicated.Is_True()) {
-
-						if (SlaveMaster.Am_I_Slave() == false) {
-         				Print("Terminating slaves on demand...\n");
-							SlaveMaster.Shutdown_Slaves();
-						}
 
          			Print("Restarting game on demand...\n");
 						AutoRestart.Set_Restart_Flag(true);
@@ -5013,7 +4965,6 @@ void	ConsoleFunctionManager::Init( void )
    FunctionList.Add( new MessageConsoleFunctionClass() );
 	FunctionList.Add( new PlayerInfoConsoleFunctionClass() );
 	FunctionList.Add( new QuitConsoleFunctionClass() );
-	FunctionList.Add( new QuitSlaveConsoleFunctionClass() );
 	FunctionList.Add( new RestartConsoleFunctionClass() );
 	FunctionList.Add( new ScreenUVBiasConsoleFunctionClass() );
 	FunctionList.Add( new SetBandwidthBudgetOutConsoleFunctionClass() );

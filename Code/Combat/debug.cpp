@@ -62,7 +62,6 @@ bool	DebugManager::EnableFileLogging;
 bool	DebugManager::EnableDiagLogging;
 bool	DebugManager::LoadDebugScripts;
 int	DebugManager::VersionNumber = 0;
-bool	DebugManager::IsSlave = false;
 bool	DebugManager::AllowCinematicKeys = false;
 
 CriticalSectionClass DebugManager::CriticalSection;
@@ -70,7 +69,6 @@ CriticalSectionClass DebugManager::CriticalSection;
 DebugDisplayHandlerClass *	DebugManager::DisplayHandler		= nullptr;
 #define DEFAULT_LOGFILE_NAME "_logfile.txt"
 const char *DebugManager::LOGFILE = DEFAULT_LOGFILE_NAME;
-char DebugManager::LogfileNameBuffer[256];
 
 /*
 ** local prototypes
@@ -396,13 +394,6 @@ void	DebugManager::Display_Text( const WideStringClass & string, const Vector3 &
 //---------------------------------------------------------------------------
 void DebugManager::Init_Logfile(void)
 {
-	if (IsSlave) {
-		RegistryClass registry(APPLICATION_SUB_KEY_NAME);
-		registry.Get_String("Name", LogfileNameBuffer, sizeof(LogfileNameBuffer), "unknown_slave");
-		::strcat(LogfileNameBuffer, DEFAULT_LOGFILE_NAME);
-		LOGFILE = LogfileNameBuffer;
-	}
-
 	//
    // Destroy contents
    //
