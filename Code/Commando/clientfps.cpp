@@ -126,6 +126,13 @@ CClientFps::Import_Creation(BitStreamClass & packet)
 	NetworkObjectClass::Import_Creation(packet);
 
 	packet.Get(ClientId);
+
+	//
+	//	A client may only report its own frame rate.
+	//
+	if (!cNetwork::Is_Genuine_Sender(this, ClientId)) {
+		ClientId = Get_Import_Owner();
+	}
 }
 
 //-----------------------------------------------------------------------------

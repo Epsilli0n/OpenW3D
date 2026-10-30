@@ -116,5 +116,10 @@ cCsPingRequestEvent::Import_Creation(BitStreamClass & packet)
 	packet.Get(SenderId);
 	packet.Get(PingNumber);
 
+	if (!cNetwork::Is_Genuine_Sender(this, SenderId)) {
+		Set_Delete_Pending();
+		return;
+	}
+
 	Act();
 }

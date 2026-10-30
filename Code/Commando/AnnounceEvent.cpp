@@ -149,6 +149,12 @@ void CSAnnouncement::Import_Creation(BitStreamClass& packet)
 	packet.Get(type);
 	mType = (AnnouncementEnum)type;
 
+	if (!cNetwork::Is_Genuine_Sender(this, mFromID))
+		{
+		Set_Delete_Pending();
+		return;
+		}
+
 	Act();
 	}
 

@@ -1239,6 +1239,27 @@ void cNetwork::Process_Eviction_Sc(cPacket & packet)
 }
 
 //-----------------------------------------------------------------------------
+// Client-to-server events carry the sender's client ID in their own data. Check it
+// against the client whose packet actually created the object, so one player cannot
+// act as another. Objects made locally (the listen server host) have no packet and pass.
+//-----------------------------------------------------------------------------
+bool cNetwork::Is_Genuine_Sender(NetworkObjectClass * object, int claimed_id)
+{
+	WWASSERT(object != nullptr);
+
+	int real_id = object->Get_Import_Owner();
+	if (real_id == -1 || real_id == claimed_id) {
+		return true;
+	}
+
+	WWDEBUG_SAY(("cNetwork::Is_Genuine_Sender: client %d sent %s claiming to be client %d\n",
+		real_id, cAppPacketStats::Interpret_Type(object->Get_App_Packet_Type()), claimed_id));
+	ConsoleBox.Print("Dropped %s from client %d: it claimed to come from client %d\n",
+		cAppPacketStats::Interpret_Type(object->Get_App_Packet_Type()), real_id, claimed_id);
+	return false;
+}
+
+//-----------------------------------------------------------------------------
 void cNetwork::Eviction_Handler(int evicted_rhost_id)
 {
 	WWMEMLOG(MEM_NETWORK);

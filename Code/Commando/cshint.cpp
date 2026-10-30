@@ -114,5 +114,10 @@ cCsHint::Import_Creation(BitStreamClass & packet)
 	packet.Get(SenderId);
 	packet.Get(SubjectId);
 
+	if (!cNetwork::Is_Genuine_Sender(this, SenderId)) {
+		Set_Delete_Pending();
+		return;
+	}
+
 	Act();
 }

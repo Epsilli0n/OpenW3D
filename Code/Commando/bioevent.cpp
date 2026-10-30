@@ -231,5 +231,10 @@ cBioEvent::Import_Creation(BitStreamClass & packet)
 
 	WWDEBUG_SAY(("cBioEvent recd\n"));
 
+	if (!cNetwork::Is_Genuine_Sender(this, SenderId)) {
+		Set_Delete_Pending();
+		return;
+	}
+
 	Act();
 }

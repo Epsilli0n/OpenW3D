@@ -157,6 +157,11 @@ cDonateEvent::Import_Creation(BitStreamClass & packet)
 	WWASSERT(SenderId > 0);
 	WWASSERT(RecipientId > 0);
 
+	if (!cNetwork::Is_Genuine_Sender(this, SenderId)) {
+		Set_Delete_Pending();
+		return;
+	}
+
 	Act();
 }
 

@@ -150,5 +150,10 @@ cCsTextObj::Import_Creation(BitStreamClass & packet)
 	packet.Get_Wide_Terminated_String(Text.Get_Buffer(256), 256);
 	packet.Get(Recipient);
 
+	if (!cNetwork::Is_Genuine_Sender(this, SenderId)) {
+		Set_Delete_Pending();
+		return;
+	}
+
 	Act();
 }
