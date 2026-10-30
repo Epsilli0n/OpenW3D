@@ -110,7 +110,8 @@ static unsigned renderer_gameplay_color;
 //
 // Class statics
 //
-const StringClass			cGameData::INI_SECTION_NAME	= "Settings";
+StringClass					cGameData::INI_SECTION_NAME	= "Settings";
+StringClass					cGameData::ServerConfigPath;
 const float					cGameData::LIMITS_X_POS			= 0.8f;
 Render2DSentenceClass	*		cGameData::PTextRenderer		= nullptr;
 int							cGameData::HostedGameNumber	= 0;
@@ -944,15 +945,41 @@ void cGameData::Import_Tier_2_Data(cPacket & packet)
 }
 
 //-----------------------------------------------------------------------------
+void cGameData::Use_Server_Config_File(const char * path, const char * section)
+{
+	ServerConfigPath = (path != nullptr) ? path : "";
+	INI_SECTION_NAME = (section != nullptr && section[0] != '\0') ? section : "Settings";
+}
+
+//-----------------------------------------------------------------------------
+bool cGameData::Is_Server_Config_File(const char * config_file)
+{
+	return !ServerConfigPath.Is_Empty() && config_file != nullptr && ServerConfigPath.Compare_No_Case(config_file) == 0;
+}
+
+//-----------------------------------------------------------------------------
+INIClass * cGameData::Open_Config_INI(const char * config_file)
+{
+	if (Is_Server_Config_File(config_file)) {
+		RawFileClass file(ServerConfigPath);
+		if (file.Is_Available()) {
+			return new INIClass(file);
+		}
+		return nullptr;
+	}
+	return Get_INI(config_file);
+}
+
+//-----------------------------------------------------------------------------
 void cGameData::Load_From_Server_Config(const char * config_file)
 {
 	WWASSERT(config_file != nullptr);
    WWASSERT(cMiscUtil::Is_String_Different(config_file, ""));
 
-   INIClass * p_ini = Get_INI(config_file);
+   INIClass * p_ini = Open_Config_INI(config_file);
 	StringClass full_filename(config_file, true);
 
-	if (p_ini == nullptr) {
+	if (p_ini == nullptr && !Is_Server_Config_File(config_file)) {
       full_filename.Format("data/%s", config_file);
       FILE * file = fopen(full_filename, "w");
 	   fclose(file);
@@ -960,6 +987,9 @@ void cGameData::Load_From_Server_Config(const char * config_file)
 		p_ini = Get_INI(config_file);
    }
 	WWASSERT(p_ini != nullptr);
+	if (p_ini == nullptr) {
+		return;
+	}
 
 	LastServerConfigModTime = Get_Config_File_Mod_Time();
 
@@ -1461,7 +1491,7 @@ bool cGameData::Has_Config_File_Changed(void)
 //-----------------------------------------------------------------------------
 unsigned int cGameData::Get_Config_File_Mod_Time(void)
 {
-	StringClass full_filename(IniFilename, true);
+	StringClass full_filename(Is_Server_Config_File(IniFilename) ? ServerConfigPath : IniFilename, true);
 	RawFileClass file(full_filename);
 
 	if (!file.Is_Available()) {

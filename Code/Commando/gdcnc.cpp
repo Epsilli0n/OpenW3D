@@ -300,8 +300,11 @@ void cGameDataCnc::Load_From_Server_Config(void)
 {
 	cGameData::Load_From_Server_Config(Get_Ini_Filename());
 
-   INIClass * p_ini = Get_INI(Get_Ini_Filename());
+   INIClass * p_ini = Open_Config_INI(Get_Ini_Filename());
    WWASSERT(p_ini != nullptr);
+	if (p_ini == nullptr) {
+		return;
+	}
 
    bool				b;
    int				i;

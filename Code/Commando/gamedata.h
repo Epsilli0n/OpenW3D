@@ -313,11 +313,26 @@ class	cGameData :
 		void					Load_From_Server_Config(const char * config_file);
 		void					Save_To_Server_Config(const char * config_file);
 
+		//
+		// The dedicated server keeps its game settings in the [Game] section of its own server file
+		// instead of a separate data\svrcfg_*.ini. When set, loading reads that file and section whenever
+		// the game's ini file name equals path.
+		//
+		static void			Use_Server_Config_File(const char * path, const char * section);
+		static bool			Is_Server_Config_File(const char * config_file);
+
 	protected:
 
 		void ReceiveSignal(MPChooseTeamSignal&) override;
 
-		static const StringClass	INI_SECTION_NAME;
+		//
+		// Opens the game settings file, from the server file when Use_Server_Config_File applies.
+		// Release with Release_INI.
+		//
+		static INIClass *	Open_Config_INI(const char * config_file);
+
+		static StringClass	INI_SECTION_NAME;
+		static StringClass	ServerConfigPath;
 		static const float			LIMITS_X_POS;
 
 		bool					DoMapsLoop;

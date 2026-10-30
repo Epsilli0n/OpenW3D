@@ -57,6 +57,11 @@ class ServerSettingsClass
 		static bool Is_Active(void) {return(IsActive);}
 		static char *Get_Settings_File_Name(void) {return(SettingsFile);}
 		static bool Check_Game_Settings_File(char *config_file);
+
+		/*
+		** Writes a commented default settings file if none exists. Returns true if it wrote one.
+		*/
+		static bool Write_Default_Settings_File(const char *filename);
 		static GameModeTypeEnum Get_Game_Mode(void) {return(GameMode);}
 		static int Get_Disk_Log_Size(void) {return(DiskLogSize);}
 

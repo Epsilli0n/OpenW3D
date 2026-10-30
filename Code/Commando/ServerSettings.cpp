@@ -61,6 +61,7 @@
 
 const char *ConfigSettingsName = "Config";
 const char *MasterServerSection = "Server";
+const char *GameSettingsSection = "Game";
 
 char ServerSettingsClass::SettingsFile[MAX_PATH];
 bool ServerSettingsClass::IsActive = false;
@@ -150,12 +151,6 @@ bool ServerSettingsClass::Parse(bool apply)
 		*/
 		INIClass ini(file);
 		ini.Get_String(MasterServerSection, ConfigSettingsName, "", master_settings, sizeof(master_settings));
-		if (strlen(master_settings) == 0) {
-			if (apply) {
-				WWDEBUG_SAY(("No master server settings specified - using defaults\n"));
-				ConsoleBox.Print("No master server settings specified - using defaults\n");
-			}
-		}
 
 		/*
 		** Load the master server settings from the ini file.
@@ -198,12 +193,41 @@ bool ServerSettingsClass::Parse(bool apply)
 	GameSpyQnR.Parse_HeartBeat_List(heartbeat_list, false);
 
 		/*
+		** Game settings live in the [Game] section of this file. Older setups keep them in a separate
+		** data\svrcfg_*.ini named by Config; that still works.
+		*/
+		if (ini.Section_Present(GameSettingsSection)) {
+			cGameData::Use_Server_Config_File(SettingsFile, GameSettingsSection);
+			if (!Check_Game_Settings_File(SettingsFile)) {
+				WWDEBUG_SAY(("Game settings in '%s' not usable\n", SettingsFile));
+				ConsoleBox.Print("Error - the [%s] section of '%s' contains errors - aborting\n", GameSettingsSection, SettingsFile);
+				ConsoleBox.Wait_For_Keypress();
+				return(false);
+			}
+			if (apply && The_Game()) {
+				The_Game()->Set_Ini_Filename(SettingsFile);
+			}
+		} else {
+			if (strlen(master_settings) == 0) {
+				strcpy(master_settings, "svrcfg_cnc.ini");
+			}
+			if (apply) {
+				ConsoleBox.Print("Reading game settings from data\\%s. Move them into a [%s] section of %s to keep everything in one file.\n",
+					master_settings, GameSettingsSection, SettingsFile);
+			}
+		}
+
+		/*
 		** Make sure the master server settings file is there.
 		*/
 		char filename[MAX_PATH];
 		sprintf(filename, "data\\%s", master_settings);
 		file.Set_Name(filename);
-		if (!file.Is_Available()) {
+		if (ini.Section_Present(GameSettingsSection)) {
+			/*
+			** Already checked above.
+			*/
+		} else if (!file.Is_Available()) {
 			WWDEBUG_SAY(("Server settings file '%s' not found\n", filename));
 			ConsoleBox.Print("Error - server settings file '%s' not found - aborting\n", filename);
 			ConsoleBox.Wait_For_Keypress();;
@@ -390,6 +414,89 @@ bool ServerSettingsClass::Parse(bool apply)
 	return(true);
 }
 
+
+
+/*
+** Commented default server file. Everything the dedicated server reads lives here: network and listing
+** settings in [Server], game rules and the map rotation in [Game], extra server list rules in [ListingRules].
+*/
+static const char DefaultSettingsFile[] =
+	"; OpenW3D dedicated server settings. Everything the server reads is in this one file.\r\n"
+	"; Changes to [Game] are picked up when the current map ends.\r\n"
+	"\r\n"
+	"[Server]\r\n"
+	"; LAN hosts on the local network only. GameSpy also lists the server on the community master servers.\r\n"
+	"GameType = LAN\r\n"
+	"; Game port (UDP). 0 uses 4848.\r\n"
+	"GameSpyGamePort = 0\r\n"
+	"; Server list query port (UDP). 0 uses 25300. Forward both ports to list the server from behind a router.\r\n"
+	"GameSpyQueryPort = 0\r\n"
+	"; Master servers to report to, comma separated host[:port]. Leave out to use the community masters.\r\n"
+	"; HeartBeatServers =\r\n"
+	"; Upstream bandwidth in bits per second. 0 means unlimited.\r\n"
+	"BandwidthUp = 0\r\n"
+	"; Network updates per second sent to each client (5-30).\r\n"
+	"NetUpdateRate = 8\r\n"
+	"; Days of console log files to keep.\r\n"
+	"DiskLogSize = 7\r\n"
+	"; Remote administration (RenRem protocol). Without it the server only listens on the local machine.\r\n"
+	"AllowRemoteAdmin = false\r\n"
+	"RemoteAdminPassword =\r\n"
+	"RemoteAdminIP =\r\n"
+	"RemoteAdminPort =\r\n"
+	"\r\n"
+	"[Game]\r\n"
+	"bGameTitle = OpenW3D Server\r\n"
+	"bMotd =\r\n"
+	"IsPassworded = no\r\n"
+	"bPassword =\r\n"
+	"MaxPlayers = 16\r\n"
+	"TimeLimitMinutes = 30\r\n"
+	"StartingCredits = 0\r\n"
+	"; 0 none, 1 team, 2 all\r\n"
+	"RadarMode = 1\r\n"
+	"IsFriendlyFirePermitted = no\r\n"
+	"IsTeamChangingAllowed = no\r\n"
+	"RemixTeams = yes\r\n"
+	"CanRepairBuildings = yes\r\n"
+	"DriverIsAlwaysGunner = yes\r\n"
+	"SpawnWeapons = no\r\n"
+	"BaseDestructionEndsGame = yes\r\n"
+	"BeaconPlacementEndsGame = yes\r\n"
+	"UseLagReduction = yes\r\n"
+	"IsAutoRestart = yes\r\n"
+	"; Map rotation, MapName00 to MapName99. MapName is the first map.\r\n"
+	"DoMapsLoop = yes\r\n"
+	"MapName = C&C_Field.mix\r\n"
+	"MapName00 = C&C_Field.mix\r\n"
+	"MapName01 = C&C_Volcano.mix\r\n"
+	"MapName02 = C&C_Under.mix\r\n"
+	"MapName03 = C&C_Walls.mix\r\n"
+	"MapName04 = C&C_City.mix\r\n"
+	"MapName05 = C&C_Canyon.mix\r\n"
+	"MapName06 = C&C_Hourglass.mix\r\n"
+	"MapName07 = C&C_Mesa.mix\r\n"
+	"MapName08 = C&C_Islands.mix\r\n"
+	"MapName09 = C&C_Complex.mix\r\n"
+	"\r\n"
+	"[ListingRules]\r\n"
+	"; Extra key = value pairs shown in server lists, for example:\r\n"
+	"; Owner = Someone\r\n"
+	"; Discord = discord.gg/example\r\n";
+
+bool ServerSettingsClass::Write_Default_Settings_File(const char *filename)
+{
+	RawFileClass file(filename);
+	if (file.Is_Available()) {
+		return(false);
+	}
+	if (!file.Open(RawFileClass::WRITE)) {
+		return(false);
+	}
+	file.Write(DefaultSettingsFile, sizeof(DefaultSettingsFile) - 1);
+	file.Close();
+	return(true);
+}
 
 
 /***********************************************************************************************
