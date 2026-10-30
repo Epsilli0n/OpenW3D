@@ -490,6 +490,11 @@ void cNetwork::Compute_Exe_Key(void)
 	// We now match only on build number.
 	//
 	string.Format("RENEGADE %u", BuildInfoClass::Get_Network_Version_Number());
+	if (BuildInfoClass::Get_Protocol_Revision() != 0) {
+		StringClass revision;
+		revision.Format(" OpenW3D %u", BuildInfoClass::Get_Protocol_Revision());
+		string += revision;
+	}
 
 	WWDEBUG_SAY(("File id string: %s\n", string.Peek_Buffer()));
 	key_string += string;
