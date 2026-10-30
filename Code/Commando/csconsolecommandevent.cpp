@@ -40,9 +40,8 @@
 #include <stdlib.h>
 
 #include "networkobjectfactory.h"
-#include "gamemode.h"
 #include "cnetwork.h"
-#include "consolefunction.h"
+#include "ConsoleMode.h"
 #include "apppackettypes.h"
 #include "networkobjectmgr.h"
 
@@ -80,9 +79,13 @@ cCsConsoleCommandEvent::Act(void)
 {
    WWASSERT(cNetwork::I_Am_Server());
 
-	if (GameModeManager::Find("Combat")->Is_Active()) {
-		ConsoleFunctionManager::Parse_Input(Command);
-	}
+	//
+	// Any client could send this, and nothing checks who sent it, so running it would
+	// let every player use the server console (quit, kick, game settings...). Refuse it
+	// until there is an admin access level to check against.
+	//
+	WWDEBUG_SAY(("cCsConsoleCommandEvent: Ignoring console command from a client\n"));
+	ConsoleBox.Print("Ignored a console command sent by a client\n");
 }
 
 //-----------------------------------------------------------------------------
