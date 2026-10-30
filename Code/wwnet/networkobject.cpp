@@ -70,7 +70,8 @@ NetworkObjectClass::NetworkObjectClass (void)	:
 	CreatedByPacketID(0),
 #endif //WWDEBUG
 	LastObjectIdIDamaged(-1),
-	LastObjectIdIGotDamagedBy(-1)
+	LastObjectIdIGotDamagedBy(-1),
+	ImportOwner(-1)
 
 {
 	if (IsServer)

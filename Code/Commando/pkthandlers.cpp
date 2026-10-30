@@ -72,6 +72,16 @@ Create_Network_Object (cPacket &packet, int class_id, int network_obj_id)
 }
 
 //-----------------------------------------------------------------------------
+// The object types a client is allowed to create on the server (the "C-created" block of
+// netclassids.h).
+//-----------------------------------------------------------------------------
+static bool
+Is_Client_Created_Class (int class_id)
+{
+	return class_id >= NETCLASSID_CLIENTCONTROL && class_id <= NETCLASSID_DONATEEVENT;
+}
+
+//-----------------------------------------------------------------------------
 void cNetwork::Server_Packet_Handler(cPacket & packet, int rhost_id)
 {
 #ifndef BETACLIENT
@@ -153,7 +163,8 @@ void cNetwork::Server_Packet_Handler(cPacket & packet, int rhost_id)
 			// So far we've only seen the problem manifest for APPPACKETTYPE_CSDAMAGEEVENT.
 			// It should be safe to kill the existing conflicting object of this type.
 			//
-			if (object->Get_App_Packet_Type() == APPPACKETTYPE_CSDAMAGEEVENT) {
+			if (object->Get_App_Packet_Type() == APPPACKETTYPE_CSDAMAGEEVENT &&
+				 object->Get_Import_Owner() == rhost_id) {
 				object->Set_Delete_Pending();
 			}
 
@@ -165,12 +176,25 @@ void cNetwork::Server_Packet_Handler(cPacket & packet, int rhost_id)
 		}
 
 		//
+		//	Clients may only create the client-to-server object types. Anything else (server
+		// object types, unknown IDs with no factory) is dropped rather than built here.
+		//
+		if (!Is_Client_Created_Class (net_classid) ||
+			 NetworkObjectFactoryMgrClass::Find_Factory (net_classid) == nullptr) {
+			WWDEBUG_SAY(("cNetwork::Server_Packet_Handler: client %d tried to create object class %d\n",
+				rhost_id, net_classid));
+			packet.Flush();
+			return;
+		}
+
+		//
 		//	Create the network object
 		//
 		object = Create_Network_Object (packet, net_classid, network_obj_id);
 #ifdef WWDEBUG
 		object->Set_Created_By_Packet_ID(packet.Get_Id());
 #endif //WWDEBUG
+		object->Set_Import_Owner (rhost_id);
 		object->Import_Creation (packet);
 
 		/*
@@ -189,6 +213,18 @@ void cNetwork::Server_Packet_Handler(cPacket & packet, int rhost_id)
 		//
 		// This was probably a quit packet. Bail !
 		//
+		packet.Flush();
+		return;
+	}
+
+	//
+	//	Clients only send updates and deletes for objects they created (client control, client
+	// fps, their own events). Updates to anything else, such as the server's soldiers, vehicles,
+	// players and teams, are dropped.
+	//
+	if (object != nullptr && object->Get_Import_Owner() != rhost_id) {
+		WWDEBUG_SAY(("cNetwork::Server_Packet_Handler: client %d sent an update for object %d it does not own\n",
+			rhost_id, network_obj_id));
 		packet.Flush();
 		return;
 	}
