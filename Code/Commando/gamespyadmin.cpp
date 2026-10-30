@@ -49,6 +49,7 @@ bool					cGameSpyAdmin::IsUnderGamespyMenuing			= false;
 bool					cGameSpyAdmin::IsLaunchFromGamespyRequested	= false;
 bool					cGameSpyAdmin::IsLaunchedFromGamespy			= false;
 bool					cGameSpyAdmin::IsServerGamespyListed			= false;
+bool					cGameSpyAdmin::IsJoinedFromServerList			= false;
 unsigned					cGameSpyAdmin::GameHostIp							= 0;
 uint16_t				cGameSpyAdmin::GameHostPort						= 0;
 WideStringClass	cGameSpyAdmin::PasswordAttempt;
@@ -161,6 +162,7 @@ cGameSpyAdmin::Reset
 	IsLaunchFromGamespyRequested	= false;
 	IsLaunchedFromGamespy			= false;
 	IsServerGamespyListed			= false;
+	IsJoinedFromServerList			= false;
 	GameHostIp							= 0;
 	GameHostPort						= 0;
 	GameSpyQnR.Shutdown();
