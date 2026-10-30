@@ -83,6 +83,17 @@ cWarpEvent::Act(void)
 
 	SoldierGameObj * p_warp_soldier = GameObjManager::Find_Soldier_Of_Client_ID(SenderId);
 
+	//
+	// Teleporting is a cheat. Remote clients may only do it in god mode, as with money and
+	// score; the local player (single player, listen server host) keeps the old behaviour.
+	//
+	if (Get_Import_Owner() != -1) {
+		cPlayer * p_sender = cPlayerManager::Find_Player(SenderId);
+		if (p_sender == nullptr || !p_sender->Invulnerable.Is_True()) {
+			p_warp_soldier = nullptr;
+		}
+	}
+
 	if (p_warp_soldier != nullptr) {
 
 		SoldierGameObj * p_other_soldier = nullptr;
