@@ -94,6 +94,7 @@
 #include "specialbuilds.h"
 #include "demosupport.h"
 #include "specialbuilds.h"
+#include "serverevents.h"
 #include <winsock2.h>
 
 const int cGameData::MAX_TIME_LIMIT       = 999;
@@ -1525,6 +1526,8 @@ void cGameData::Game_Over_Processing(void)
    WWDEBUG_SAY(("cGameData::Game_Over_Processing\n"));
 
 	WWASSERT(cNetwork::I_Am_Server());
+
+	ServerEvents::Game_Over();
 
    int winning_team = cTeamManager::Get_Leaders_Id();
 

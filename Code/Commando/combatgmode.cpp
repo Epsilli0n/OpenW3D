@@ -111,6 +111,7 @@
 #include "dialogtests.h"
 #include "dialogmgr.h"
 #include "GameSpy_QnR.h"
+#include "serverevents.h"
 #include <cstdio>
 
 /*
@@ -830,6 +831,8 @@ void CombatGameModeClass::Load_Level( void )
 	ConsoleBox.Print("Level loaded OK\n");
 
 	GameSpyQnR.Init();
+
+	ServerEvents::Level_Loaded();
 
 	//
 	// Re-enable packet processing.

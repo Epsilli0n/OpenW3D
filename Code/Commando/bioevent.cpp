@@ -51,6 +51,7 @@
 #include "ConsoleMode.h"
 #include "winevent.h"
 #include "gamespyadmin.h"
+#include "serverevents.h"
 
 DECLARE_NETWORKOBJECT_FACTORY(cBioEvent, NETCLASSID_BIOEVENT);
 
@@ -157,6 +158,8 @@ cBioEvent::Act(void)
 			StringClass str(128, true);
 			Nickname.Convert_To(str);
 			ConsoleBox.Print_Maybe("Player %s joined the game\n", str.Peek_Buffer());
+
+			ServerEvents::Player_Join(p_player);
 
 			//
 			// If we (the server) are already in intermission mode then deactivate the player until the next map starts. The player
