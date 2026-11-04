@@ -484,7 +484,17 @@ static const char DefaultSettingsFile[] =
 	"[ListingRules]\r\n"
 	"; Extra key = value pairs shown in server lists, for example:\r\n"
 	"; Owner = Someone\r\n"
-	"; Discord = discord.gg/example\r\n";
+	"; Discord = discord.gg/example\r\n"
+	"\r\n"
+	"[General]\r\n"
+	"; Dragonade settings (da.ini's [General]). A [C&C_Field.mix] style section overrides them per map.\r\n"
+	"; TCP port for server bots (BRenBot and others written for Dragonade or SSGM). 0 turns it off.\r\n"
+	"LogPort = 0\r\n"
+	"; Address the bot port listens on. Anything a connected bot sends runs as a server console\r\n"
+	"; command, so keep this on 127.0.0.1 unless the bot runs on another trusted machine.\r\n"
+	"LogIP = 127.0.0.1\r\n"
+	"; Send the SSGM gamelog (001 lines) to bots.\r\n"
+	"EnableGameLog = 1\r\n";
 
 bool ServerSettingsClass::Write_Default_Settings_File(const char *filename)
 {
