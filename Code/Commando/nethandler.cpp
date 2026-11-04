@@ -39,7 +39,6 @@
 #include "cnetwork.h"
 #include "playermanager.h"
 #include "playerkill.h"
-#include "serverevents.h"
 
 //-----------------------------------------------------------------------------
 bool GameCombatNetworkHandlerClass::Can_Damage(ArmedGameObj * /* p_armed_damager */,
@@ -123,10 +122,6 @@ void GameCombatNetworkHandlerClass::On_Soldier_Kill(SoldierGameObj * p_soldier, 
 			p_team->Increment_Kills();
 		}
 	}
-
-	ServerEvents::Kill(
-		p_soldier->Has_Player() ? cPlayerManager::Find_Player(killer_id) : nullptr,
-		p_victim->Has_Player() ? cPlayerManager::Find_Player(victim_id) : nullptr);
 }
 
 //-----------------------------------------------------------------------------

@@ -337,8 +337,8 @@ set(COMMANDO_SRC
     GameSpyBanList.h
     serverbrowser.cpp
     serverbrowser.h
-    serverevents.cpp
-    serverevents.h
+    da_event.cpp
+    da_event.h
     floodprotectionmgr.cpp
     floodprotectionmgr.h
     modpackage.cpp

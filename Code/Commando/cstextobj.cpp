@@ -47,7 +47,7 @@
 #include "apppackettypes.h"
 #include "floodprotectionmgr.h"
 #include "playermanager.h"
-#include "serverevents.h"
+#include "da_event.h"
 
 
 DECLARE_NETWORKOBJECT_FACTORY(cCsTextObj, NETCLASSID_CSTEXTOBJ);
@@ -126,7 +126,7 @@ cCsTextObj::Act(void)
 		(Type != TEXT_MESSAGE_PRIVATE || (Recipient >= 0 && Recipient < NetworkObjectClass::MAX_CLIENT_COUNT));
 
 	if (is_valid && GameModeManager::Find("Combat")->Is_Active() &&
-		 ServerEvents::Chat(p_sender, Type, Recipient, Text)) {
+		 DAEventManager::Chat_Event(p_sender, Type, Text.Peek_Buffer(), Recipient)) {
 		cScTextObj * p_test_obj = new cScTextObj;
 		p_test_obj->Init(Text, Type, false, SenderId, Recipient);
 	}
