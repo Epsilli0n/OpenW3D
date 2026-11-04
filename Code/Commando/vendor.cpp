@@ -53,6 +53,8 @@
 #include "weaponbag.h"
 #include "weapons.h"
 #include "purchaseresponseevent.h"
+#include "playermanager.h"
+#include "serverevents.h"
 
 
 ////////////////////////////////////////////////////////////////
@@ -316,6 +318,17 @@ VendorClass::Purchase_Item
 		//if (base != nullptr && base->Is_Base_Powered () == false) {
 		if (type != TYPE_BEACON && base != nullptr && base->Is_Base_Powered () == false) {
 			cost = cost * 2;
+		}
+
+		//
+		//	Server features can change the price or refuse the purchase.
+		//
+		if (!ServerEvents::Purchase (cPlayerManager::Find_Player (player->Get_Control_Owner ()), type, definition_id, cost)) {
+			if (is_from_server) {
+				cPurchaseResponseEvent *event = new cPurchaseResponseEvent;
+				event->Init ((int)PERR_NOT_IN_STOCK, cNetwork::Get_My_Id ());
+			}
+			return PERR_NOT_IN_STOCK;
 		}
 
 		if (type == TYPE_CHARACTER || type == TYPE_ENLISTED_CHARACTER || type == TYPE_SECRET_CHARACTER) {

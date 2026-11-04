@@ -72,6 +72,20 @@ public:
 	//
 	virtual bool		On_Chat(cPlayer * /* sender */, int /* type */, int /* recipient_id */,
 								  const WideStringClass & /* text */)	{ return true; }
+
+	//
+	// A player asked to buy something (type is a VendorClass::PURCHASE_TYPE, definition_id
+	// the preset). cost can be changed (0 makes it free). Return false to refuse; the
+	// player is told "not in stock" and later handlers are not called.
+	//
+	virtual bool		On_Purchase(cPlayer * /* buyer */, int /* type */, int /* definition_id */,
+									int & /* cost */)							{ return true; }
+
+	//
+	// A soldier was killed. killer is null for kills by the world, AI or a building, and
+	// may equal victim for suicides.
+	//
+	virtual void		On_Kill(cPlayer * /* killer */, cPlayer * /* victim */)	{}
 };
 
 //-----------------------------------------------------------------------------
@@ -90,6 +104,8 @@ public:
 	static void			Player_Leave(cPlayer * player);
 	static void			Think(void);
 	static bool			Chat(cPlayer * sender, int type, int recipient_id, const WideStringClass & text);
+	static bool			Purchase(cPlayer * buyer, int type, int definition_id, int & cost);
+	static void			Kill(cPlayer * killer, cPlayer * victim);
 
 private:
 	static DynamicVectorClass<ServerEventHandlerClass *>	Handlers;

@@ -125,3 +125,35 @@ ServerEvents::Chat(cPlayer * sender, int type, int recipient_id, const WideStrin
 	}
 	return true;
 }
+
+//-----------------------------------------------------------------------------
+bool
+ServerEvents::Purchase(cPlayer * buyer, int type, int definition_id, int & cost)
+{
+	if (!cNetwork::I_Am_Server() || buyer == nullptr) {
+		return true;
+	}
+
+	for (int i = 0; i < Handlers.Count(); i++) {
+		if (!Handlers[i]->On_Purchase(buyer, type, definition_id, cost)) {
+			return false;
+		}
+	}
+	if (cost < 0) {
+		cost = 0;
+	}
+	return true;
+}
+
+//-----------------------------------------------------------------------------
+void
+ServerEvents::Kill(cPlayer * killer, cPlayer * victim)
+{
+	if (!cNetwork::I_Am_Server() || victim == nullptr) {
+		return;
+	}
+
+	for (int i = 0; i < Handlers.Count(); i++) {
+		Handlers[i]->On_Kill(killer, victim);
+	}
+}
