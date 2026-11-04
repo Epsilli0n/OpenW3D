@@ -79,6 +79,10 @@ All Out War, Marathon (no time limit), Infantry only, Sniping, Shotgun Wars, Dom
 ### Needs client support
 Key hooks, emote icons over players and drops, HUD messages, per-player sounds, radar changes, server dialogs and the TT damage path need TT clients. Everything else works for any client.
 
+## Progress
+
+- Server event layer (`Code/Commando/serverevents.h`): features derive from `ServerEventHandlerClass` and call `ServerEvents::Register_Handler`. Events: level loaded, game over, player join, player leave, per-frame think, chat (can block), purchase (can change the cost or refuse), kill. They fire only on the server, from the main thread. No handlers yet; the bot log, chat commands and admin commands will be the first.
+
 ## Proposed order for OpenW3D
 
 1. **Server foundation**
