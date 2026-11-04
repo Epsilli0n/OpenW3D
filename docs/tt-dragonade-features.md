@@ -90,7 +90,18 @@ Key hooks, emote icons over players and drops, HUD messages, per-player sounds, 
 
 ## Progress
 
-- Server event layer (`Code/Commando/serverevents.h`): features derive from `ServerEventHandlerClass` and call `ServerEvents::Register_Handler`. Events: level loaded, game over, player join, player leave, per-frame think, chat (can block), purchase (can change the cost or refuse), kill. They fire only on the server, from the main thread. No handlers yet; the bot log, chat commands and admin commands will be the first.
+- **Event manager** (`da_event.h/.cpp`, ported from DA): `DAEventClass`, `Register_Event` with priorities, object events, timers, DA's enums. Dispatched so far: settings loaded, level loaded, game over (after winner and duration are set), player join and leave, think and timers, chat (can block), character/vehicle/powerup purchase request (`PurchaseStatus`, cost can change) and purchase, refill, console output, renlog, DA log. Not yet: chat commands, key hooks, host chat, radio, connection request and pre-join, name change, remix/rebalance/swap, team change, vehicle enter/exit/flip, weapons, powerup grant, C4 and beacons, change character, and all object events (created, destroyed, damage, kill, poke, zones).
+- **Settings** (`da_settings`): DA's lookup over sections of `server.ini`. Reloaded every map, then `Settings_Loaded_Event`.
+- **Log server for bots** (`da_log`): `LogPort` and `LogIP` in `[General]`; 000/001/002/003 records ending in NUL; lines from the bot run as console commands. 002 and 003 come from `ConsoleModeClass::Log_To_Disk` (everything the dedicated server logs).
+- **Gamelog** (`da_gamelog`, `EnableGameLog`): `2.03;<map>`, `CONFIG;<minutes>;<title>`, `WIN;<team>;<win type>;<Nod score>;<GDI score>`. DA log lines: `_LEVEL`, `_GENERAL` (game ended), `_GAMEOVER`, `_GAMEFEATURE`.
+- Checked headless with a TCP client on 2026-11-05 (game_info output came back; gameover produced the lines above in DA's format). Not yet tried with a real bot.
+
+### Bot compatibility gaps
+
+- Chat: DA sends no `_CHAT` line; bots read chat from the 002/003 copy of the server log. Our server log shows chat only through `ConsoleModeClass::Add_Message`, which skips lines while someone is typing at the server console. Needs checking against what BRenBot expects.
+- Commands bots call: TT's `player_info`, `pinfo`, `game_info`, `sversion`, `page`, `mlist` live in the closed `tt.dll`. We have the stock `game_info` and `player_info` output; the TT layouts have to be matched from captures of a real TT server.
+- Gamelog object lines (CREATED, DESTROYED, DAMAGED, KILLED, ENTER, EXIT) and the DA kill, purchase, building, beacon and vehicle headers wait for their events.
+- Text is ANSI; DA's `%ls` names go through the C runtime locale.
 
 ## Proposed order for OpenW3D
 
