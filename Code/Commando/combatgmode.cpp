@@ -112,6 +112,7 @@
 #include "dialogmgr.h"
 #include "GameSpy_QnR.h"
 #include "da_event.h"
+#include "da_game.h"
 #include <cstdio>
 
 /*
@@ -832,6 +833,9 @@ void CombatGameModeClass::Load_Level( void )
 
 	GameSpyQnR.Init();
 
+	if (cNetwork::I_Am_Server()) {
+		DAGameManager::Init();
+	}
 	DAEventManager::Level_Loaded_Event();
 
 	//

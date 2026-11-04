@@ -51,6 +51,7 @@
 #include "gamesideservercontrol.h"
 #include "specialbuilds.h"
 #include "ServerSettings.h"
+#include "da_event.h"
 #include <limits>
 #include <filesystem>
 #include <chrono>
@@ -477,6 +478,13 @@ const char *ConsoleModeClass::Get_Log_File_Name(void)
  *=============================================================================================*/
 void ConsoleModeClass::Log_To_Disk(const char *string)
 {
+	//
+	// Everything written to the server log is also Dragonade's console output and renlog, which
+	// the log server (da_log.cpp) streams to bots as 003 and 002 records.
+	//
+	DAEventManager::Ren_Log_Event(string);
+	DAEventManager::Console_Output_Event(string);
+
 	if (ConsoleOutputHandle != INVALID_HANDLE_VALUE) {
 		if (ServerSettingsClass::Get_Disk_Log_Size() > 0) {
    		FILE *log_file = fopen(Get_Log_File_Name(), "at");

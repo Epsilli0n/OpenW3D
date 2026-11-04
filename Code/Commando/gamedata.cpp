@@ -1527,8 +1527,6 @@ void cGameData::Game_Over_Processing(void)
 
 	WWASSERT(cNetwork::I_Am_Server());
 
-	DAEventManager::Game_Over_Event();
-
    int winning_team = cTeamManager::Get_Leaders_Id();
 
 	//
@@ -1583,6 +1581,12 @@ void cGameData::Game_Over_Processing(void)
 	}
 
 	mWinnerID = winning_team;
+
+	//
+	// Dragonade game over handlers read the winner, win type and duration, so they run
+	// once those are set. The map has already rotated; they use the map that was played.
+	//
+	DAEventManager::Game_Over_Event();
 
 	cWinEvent * p_win = new cWinEvent;
 	p_win->Init(mWinnerID, PLAYER_ID_UNKNOWN, IsMapCycleOver);

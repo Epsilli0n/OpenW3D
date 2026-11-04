@@ -339,6 +339,13 @@ set(COMMANDO_SRC
     serverbrowser.h
     da_event.cpp
     da_event.h
+    da_game.cpp
+    da_game.h
+    da_gamelog.cpp
+    da_log.cpp
+    da_log.h
+    da_settings.cpp
+    da_settings.h
     floodprotectionmgr.cpp
     floodprotectionmgr.h
     modpackage.cpp
