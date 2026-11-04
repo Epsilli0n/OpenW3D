@@ -34,7 +34,18 @@ Changes added on top of [w3dhub/OpenW3D](https://github.com/w3dhub/OpenW3D) at `
   - `RequireOpponent = no` in the server's game settings lets a game run with a single player instead of waiting at "Gameplay is pending" for the other team
   - The dedicated server no longer runs console commands sent by clients
   - The server checks client input: clients can no longer act as other players (chat, disconnect, team change, money, kills), steer other players' soldiers, update or delete server objects, report damage for anything but their own soldier, or crash the server with unknown object types
+  - The server also drops chat messages with a missing sender, unknown type or bad recipient, and ignores client requests to delete objects; `warp` needs god mode
+  - OpenW3D protocol revision in the join key (`BuildInfoClass::Get_Protocol_Revision`), so OpenW3D builds that send different data refuse each other; the listed `gamever` stays 838
   - Test: `commando_serverbrowser_tests` checks the list and query handling against a fake master and servers on loopback
+- Tiberian Technologies and Dragonade server systems, being replicated so TT/DA server owners, bot authors and developers can use OpenW3D the same way (plan and progress in `docs/tt-dragonade-features.md`)
+  - Approach: Dragonade's code is ported with its copyright notices and API names (`DAEventClass`, `DAEventManager`, `DASettingsManager`, `DALogManager`); TT's engine features are built into the engine directly. TT plugins and DA's `scripts.dll` binaries are not loaded
+  - Event manager ported from Dragonade: `Register_Event` with priorities, request events that can block or change values, object events, timers, DA's access levels and chat types. Fired so far: settings loaded, level loaded, game over, player join and leave, think, chat, character/vehicle/powerup purchase requests (TT's `PurchaseStatus` results) and purchases, refill, console output and log
+  - Dragonade settings read from sections of the one `server.ini` with DA's lookup order: `[General]`, per-map `[C&C_Field.mix]`, `[<map>_<Section>]` over `[<Section>]`; reloaded every map
+  - Bot log port in Dragonade's format for BRenBot-style bots (`LogPort`, `EnableGameLog` in `[General]`): `000` DA log lines, `001` SSGM gamelog, `002` server log copy, `003` console output, NUL-terminated; lines a bot sends run as console commands. Listens on 127.0.0.1 unless `LogIP` says otherwise (DA listens everywhere without a password)
+  - Log lines so far: `_LEVEL`, `_GENERAL`, `_GAMEOVER`, `_GAMEFEATURE`, and gamelog `2.03;<map>`, `CONFIG`, `WIN`
+  - Coming next: object, damage, kill and vehicle events (full gamelog), chat commands with access levels, admin commands (kick and ban with reasons, mute, pages), the join filter, then DA's gameplay features and game modes
+- Crash fixes on x64: the client hint list sorted 8 byte pointers as 4 byte values and crashed once two soldiers or vehicles were in view; the crash handler itself faulted while walking the stack
+- Crash reports: `_except.dmp` minidump plus `_except.txt` with `module+offset` frames that resolve against the `.pdb`
 - Benchmarking switches: `W3D_VSYNC=0` and `W3D_RENDER_STATS=1` (D3D12 also logs draws, uploads and GPU frame time)
 - FFmpeg and OpenAL installed through vcpkg (`dev/vcpkg-media`) in the `win` preset, with fallback to the stubs if missing
 - Visual Studio 2026 x64 preset, and MSVC builds require the VS 2026 toolset
