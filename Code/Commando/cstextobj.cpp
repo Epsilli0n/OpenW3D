@@ -46,6 +46,7 @@
 #include "networkobjectmgr.h"
 #include "apppackettypes.h"
 #include "floodprotectionmgr.h"
+#include "playermanager.h"
 
 
 DECLARE_NETWORKOBJECT_FACTORY(cCsTextObj, NETCLASSID_CSTEXTOBJ);
@@ -112,7 +113,18 @@ cCsTextObj::Act(void)
 {
 	WWASSERT(cNetwork::I_Am_Server());
 
-	if (GameModeManager::Find("Combat")->Is_Active()) {
+	//
+	// The message type and recipient come from the client. cScTextObj::Init needs a real
+	// sender for team messages, and uses the recipient as an index into per-client arrays.
+	//
+	cPlayer * p_sender = cPlayerManager::Find_Player(SenderId);
+	bool is_valid =
+		p_sender != nullptr &&
+		(Type == TEXT_MESSAGE_PUBLIC || Type == TEXT_MESSAGE_TEAM || Type == TEXT_MESSAGE_PRIVATE) &&
+		(Type != TEXT_MESSAGE_TEAM || p_sender->Is_Team_Player()) &&
+		(Type != TEXT_MESSAGE_PRIVATE || (Recipient >= 0 && Recipient < NetworkObjectClass::MAX_CLIENT_COUNT));
+
+	if (is_valid && GameModeManager::Find("Combat")->Is_Active()) {
 		cScTextObj * p_test_obj = new cScTextObj;
 		p_test_obj->Init(Text, Type, false, SenderId, Recipient);
 	}
