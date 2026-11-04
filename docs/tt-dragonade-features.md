@@ -79,6 +79,15 @@ All Out War, Marathon (no time limit), Infantry only, Sniping, Shotgun Wars, Dom
 ### Needs client support
 Key hooks, emote icons over players and drops, HUD messages, per-player sounds, radar changes, server dialogs and the TT damage path need TT clients. Everything else works for any client.
 
+## Decisions (2026-11-05)
+
+- **Goal:** replicate TT and Dragonade's features and systems closely enough that anyone who knows TT/DA can use ours. Server admins and bot authors should find the same config keys, console and chat commands, log formats and bot port. DA developers should find the same API (`DAEventClass`, `Register_Event`, priorities, request events that block, chat commands with access levels, timers, game features).
+- **Port DA's code, keep its API shape.** OpenW3D owns the engine DA wraps, so DA's logic can be brought over close to unchanged, with Dragonade's copyright notices kept (GPL v2 or later, compatible with our GPL v3). Ported files keep DA's names (`da_event`, `da_log`, `da_settings`...). Code that depends on TT's closed `tt.dll` is reimplemented against our engine.
+- **Not a goal:** loading TT plugins or DA's `scripts.dll` binaries (32-bit, tied to `tt.dll` and fixed addresses). TT clients still cannot join (different protocol).
+- **Config: one file.** DA's settings live in `server.ini` under DA's own section names: `[General]` for what `da.ini [General]` holds, `[<map file>]` (for example `[C&C_Field.mix]`) for per-map overrides, and `[<map file>_<Section>]` over `[<Section>]` for feature sections, read with DA's lookup order. An admin can paste sections from a `da.ini`. `da_<mode>.ini` game-mode layers will be sections too.
+- **Bots must work unchanged.** Existing bots (BRenBot and others written for DA or SSGM) connect to DA's TCP log port and get the same stream: `000` DA log lines with `_HEADER`s, `001` gamelog, `002` renlog copy, `003` console output, each record ending in a NUL byte, and lines they send back run as console commands. Records, headers and gamelog lines follow `da_log.cpp`, `da_gamelog.cpp` and SSGM's `gmlog.cpp` exactly, including the timestamp `[HH:MM:SS]`.
+- **One security difference from DA:** DA's log port listens on every address with no password, so anyone who can reach it can run server commands. Ours listens on 127.0.0.1 unless `LogIP` names another address, so bots on the same machine work as before and remote bots need an explicit setting.
+
 ## Progress
 
 - Server event layer (`Code/Commando/serverevents.h`): features derive from `ServerEventHandlerClass` and call `ServerEvents::Register_Handler`. Events: level loaded, game over, player join, player leave, per-frame think, chat (can block), purchase (can change the cost or refuse), kill. They fire only on the server, from the main thread. No handlers yet; the bot log, chat commands and admin commands will be the first.
