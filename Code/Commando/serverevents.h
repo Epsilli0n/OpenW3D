@@ -30,6 +30,7 @@
 #define __SERVEREVENTS_H__
 
 #include "vector.h"
+#include "widestring.h"
 
 class cPlayer;
 
@@ -63,6 +64,14 @@ public:
 	// Once per server frame while a game is running.
 	//
 	virtual void		On_Think(void)										{}
+
+	//
+	// A player sent a chat message (type is a TextMessageEnum; recipient_id is the player
+	// ID for private messages). Return false to block it; the message is then not shown
+	// to anyone and later handlers are not called. Used for !commands and mutes.
+	//
+	virtual bool		On_Chat(cPlayer * /* sender */, int /* type */, int /* recipient_id */,
+								  const WideStringClass & /* text */)	{ return true; }
 };
 
 //-----------------------------------------------------------------------------
@@ -80,6 +89,7 @@ public:
 	static void			Player_Join(cPlayer * player);
 	static void			Player_Leave(cPlayer * player);
 	static void			Think(void);
+	static bool			Chat(cPlayer * sender, int type, int recipient_id, const WideStringClass & text);
 
 private:
 	static DynamicVectorClass<ServerEventHandlerClass *>	Handlers;

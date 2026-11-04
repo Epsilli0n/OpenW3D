@@ -47,6 +47,7 @@
 #include "apppackettypes.h"
 #include "floodprotectionmgr.h"
 #include "playermanager.h"
+#include "serverevents.h"
 
 
 DECLARE_NETWORKOBJECT_FACTORY(cCsTextObj, NETCLASSID_CSTEXTOBJ);
@@ -124,7 +125,8 @@ cCsTextObj::Act(void)
 		(Type != TEXT_MESSAGE_TEAM || p_sender->Is_Team_Player()) &&
 		(Type != TEXT_MESSAGE_PRIVATE || (Recipient >= 0 && Recipient < NetworkObjectClass::MAX_CLIENT_COUNT));
 
-	if (is_valid && GameModeManager::Find("Combat")->Is_Active()) {
+	if (is_valid && GameModeManager::Find("Combat")->Is_Active() &&
+		 ServerEvents::Chat(p_sender, Type, Recipient, Text)) {
 		cScTextObj * p_test_obj = new cScTextObj;
 		p_test_obj->Init(Text, Type, false, SenderId, Recipient);
 	}

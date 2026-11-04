@@ -109,3 +109,19 @@ ServerEvents::Think(void)
 		Handlers[i]->On_Think();
 	}
 }
+
+//-----------------------------------------------------------------------------
+bool
+ServerEvents::Chat(cPlayer * sender, int type, int recipient_id, const WideStringClass & text)
+{
+	if (!cNetwork::I_Am_Server() || sender == nullptr) {
+		return true;
+	}
+
+	for (int i = 0; i < Handlers.Count(); i++) {
+		if (!Handlers[i]->On_Chat(sender, type, recipient_id, text)) {
+			return false;
+		}
+	}
+	return true;
+}
