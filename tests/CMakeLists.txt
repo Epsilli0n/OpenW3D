@@ -49,6 +49,15 @@ if(WIN32)
     endif()
 endif()
 
+# Internet server list tests. Runs against a fake master and fake servers on loopback.
+if(WIN32)
+    w3d_add_test(commando_serverbrowser_tests
+        SOURCES Commando/ServerBrowserTests.cpp "${code_dir}/Commando/serverbrowser.cpp"
+        LIBRARIES ws2_32)
+    target_include_directories(commando_serverbrowser_tests PRIVATE "${code_dir}/Commando")
+    target_compile_features(commando_serverbrowser_tests PRIVATE cxx_std_20)
+endif()
+
 # Keep this target independent of wwlib so Linux can exercise the message pump
 # before the entire library is portable.
 w3d_add_test(wwlib_msgloop_tests
