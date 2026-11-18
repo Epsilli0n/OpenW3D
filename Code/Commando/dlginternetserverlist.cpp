@@ -605,6 +605,11 @@ InternetServerListMenuClass::Connect_To_Server (void)
 	cGameSpyAdmin::Set_Game_Host_Ip (PendingJoin.Address);
 	cGameSpyAdmin::Set_Game_Host_Port (PendingJoin.GamePort);
 
+	//
+	//	This dialog is gone by the time the game ends, so remember where to come back to.
+	//
+	cGameSpyAdmin::Set_Is_Joined_From_Server_List (true);
+
 	if (PTheGameData != nullptr) {
 		delete PTheGameData;
 		PTheGameData = nullptr;
