@@ -1,6 +1,6 @@
 # OpenW3D (Epsilli0n fork)
 
-Changes added on top of [w3dhub/OpenW3D](https://github.com/w3dhub/OpenW3D) at `523ea385`:
+Changes added on top of [w3dhub/OpenW3D](https://github.com/w3dhub/OpenW3D) (forked at `523ea385`, upstream merged up to `eecdc1af`):
 
 - 64-bit Windows as the primary target: x64 builds now have sound and movies (FFmpeg and OpenAL replace the 32-bit-only Miles and Bink), the VS 2026 preset targets x64, and CI checks the x64 media build
 - Native Direct3D 12 renderer backend (`W3D_RENDERER_D3D12`, on by default for MSVC Windows builds)
@@ -49,7 +49,7 @@ Changes added on top of [w3dhub/OpenW3D](https://github.com/w3dhub/OpenW3D) at `
 - Benchmarking switches: `W3D_VSYNC=0` and `W3D_RENDER_STATS=1` (D3D12 also logs draws, uploads and GPU frame time)
 - FFmpeg and OpenAL installed through vcpkg (`dev/vcpkg-media`) in the `win` preset, with fallback to the stubs if missing
 - Visual Studio 2026 x64 preset, and MSVC builds require the VS 2026 toolset
-- Tests: D3D12 device (runs on WARP), D3D12 format conversion, D3DX replacement checks
+- Tests: D3D12 device (runs on WARP), D3D12 format conversion, D3DX replacement checks and the server browser test, registered in upstream's `tests/` folder (`ctest --test-dir build/win -C Release`)
 - `dev/stage-run.ps1` stages a runnable folder against an existing Renegade install
 - Fixes: version read from the latest `v*` tag, launcher builds without MFC, DxErr shim includes `stdio.h`, ATI back buffer workaround limited to D3D9
 - CI: Windows jobs pinned to `windows-2025`, MSVC x64 built with FFmpeg and OpenAL, packaging and artifact upload only in the upstream repository
