@@ -59,7 +59,10 @@
                 "VCPKG_TARGET_TRIPLET": "x64-windows",
                 "VCPKG_INSTALLED_DIR": "C:/vcpkg.installed",
                 "W3D_BUILD_QT_TOOLS": "ON",
-                "VCPKG_MANIFEST_DIR": "${sourceDir}"
+                "VCPKG_MANIFEST_DIR": "${sourceDir}",
+                "W3D_BUILD_OPTION_FFMPEG": "ON",
+                "W3D_BUILD_OPTION_OPENAL": "ON",
+                "W3D_BUILD_OPTION_MILES": "OFF"
             }
         },
         {

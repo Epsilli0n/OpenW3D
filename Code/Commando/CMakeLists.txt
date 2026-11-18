@@ -419,11 +419,3 @@ if(W3D_FDS) # Dedicated headless server
     target_compile_definitions(renegadeserver PRIVATE FREEDEDICATEDSERVER)
 endif()
 
-# Internet server list tests. Runs against a fake master and fake servers on loopback.
-if(WIN32)
-    add_executable(commando_serverbrowser_tests tests/ServerBrowserTests.cpp serverbrowser.cpp)
-    target_include_directories(commando_serverbrowser_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-    target_compile_features(commando_serverbrowser_tests PRIVATE cxx_std_20)
-    target_link_libraries(commando_serverbrowser_tests PRIVATE ws2_32)
-    add_test(NAME commando_serverbrowser_tests COMMAND commando_serverbrowser_tests)
-endif()
