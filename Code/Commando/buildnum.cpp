@@ -62,6 +62,28 @@ unsigned int BuildInfoClass::Get_Network_Version_Number(void)
 }
 
 /***********************************************************************************************
+ * BuildInfoClass::Get_Protocol_Revision -- Gets OpenW3D's network protocol revision.          *
+ *                                                                                             *
+ * Increment this whenever OpenW3D changes what client and server send each other (new        *
+ * fields, new events). It goes into the join key (cNetwork::Compute_Exe_Key).                 *
+ *                                                                                             *
+ * INPUT:    Nothing                                                                           *
+ *                                                                                             *
+ * OUTPUT:   Protocol revision                                                                 *
+ *                                                                                             *
+ * WARNINGS: None                                                                              *
+ *                                                                                             *
+ * HISTORY:                                                                                    *
+ *   10/29/2026 : Created, revision 0 (adds nothing to the key)                                *
+ *   10/29/2026 : 1 - game settings (tier 2 data) carry RequireOpponent                        *
+ *=============================================================================================*/
+unsigned int BuildInfoClass::Get_Protocol_Revision(void)
+{
+	static constexpr unsigned int PROTOCOL_REVISION = 1;
+	return (PROTOCOL_REVISION);
+}
+
+/***********************************************************************************************
  * BuildInfoClass::Get_Build_Number -- Gets the 32 bit build number.                           *
  *                                                                                             *
  *                                                                                             *

@@ -44,6 +44,7 @@
 #include "cnetwork.h"
 #include "networkobjectmgr.h"
 #include "apppackettypes.h"
+#include "ConsoleMode.h"
 
 
 DECLARE_NETWORKOBJECT_FACTORY(cRequestKillEvent, NETCLASSID_REQUESTKILLEVENT);
@@ -111,5 +112,12 @@ cRequestKillEvent::Import_Creation(BitStreamClass & packet)
 
 	packet.Get(ObjectId);
 
-	Act();
+	//
+	// This deletes any network object (players, buildings...), and only a debug console
+	// command sends it. Do not take it from clients.
+	//
+	WWDEBUG_SAY(("cRequestKillEvent: Ignoring request from client %d to delete object %d\n",
+		Get_Import_Owner(), ObjectId));
+	ConsoleBox.Print("Ignored a request from client %d to delete an object\n", Get_Import_Owner());
+	Set_Delete_Pending();
 }

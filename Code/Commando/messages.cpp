@@ -84,6 +84,7 @@
 #include "gameinitmgr.h"
 #include "dlgcncwinscreen.h"
 #include "ConsoleMode.h"
+#include "da_event.h"
 
 static int LastSortedSecond;
 
@@ -1447,6 +1448,11 @@ bool cNetwork::Server_Think(void)
 	   End_Game_Test();
 	}
 
+	if (GameModeManager::Find( "Combat" )->Is_Active()) {
+		WWPROFILE( "Server events" );
+		DAEventManager::Think();
+	}
+
    //
 	// Update clients about dynamic & static objects
 	//
@@ -1561,6 +1567,8 @@ void cNetwork::Remove_Player(int player_id)
 		StringClass str(128, true);
 		p_player->Get_Name().Convert_To(str);
 		ConsoleBox.Print_Maybe("Player %s left the game\n", str.Peek_Buffer());
+
+		DAEventManager::Player_Leave_Event(p_player);
 	}
 
 	if (p_player != nullptr && IS_MULTIPLAY) {

@@ -53,6 +53,56 @@
 #include "weaponbag.h"
 #include "weapons.h"
 #include "purchaseresponseevent.h"
+#include "playermanager.h"
+#include "da_event.h"
+
+
+////////////////////////////////////////////////////////////////
+//
+//	Purchase_Status_Allows
+//
+//	Turns the result of a Dragonade purchase request event into what the vendor does next.
+// Returns true when the normal purchase should go ahead with 'cost'; otherwise 'retval'
+// holds the answer for the player.
+//
+////////////////////////////////////////////////////////////////
+static bool
+Purchase_Status_Allows (PurchaseStatus status, float da_cost, int &cost, VendorClass::PURCHASE_ERROR &retval)
+{
+	switch (status) {
+		case PurchaseStatus_Allow:
+		case PurchaseStatus_AllowNoSpawn:
+			cost = (int)da_cost;
+			if (cost < 0) {
+				cost = 0;
+			}
+			return true;
+
+		case PurchaseStatus_AllowFree:
+			cost = 0;
+			return true;
+
+		case PurchaseStatus_Granted:
+			retval = VendorClass::PERR_SUCCESS;
+			return false;
+
+		case PurchaseStatus_Pending:
+			retval = VendorClass::PERR_OPERATION_PENDING;
+			return false;
+
+		case PurchaseStatus_InsufficientFunds:
+			retval = VendorClass::PERR_NO_FUNDS;
+			return false;
+
+		case PurchaseStatus_FactoryUnavailable:
+			retval = VendorClass::PERR_NO_FACTORY;
+			return false;
+
+		default:
+			retval = VendorClass::PERR_NOT_IN_STOCK;
+			return false;
+	}
+}
 
 
 ////////////////////////////////////////////////////////////////
@@ -318,31 +368,83 @@ VendorClass::Purchase_Item
 			cost = cost * 2;
 		}
 
+		//
+		//	Server features (Dragonade events) can change the price, give the item for free,
+		// grant it themselves or refuse the purchase.
+		//
+		cPlayer *buyer					= cPlayerManager::Find_Player (player->Get_Control_Owner ());
+		DefinitionClass *item_def	= DefinitionMgrClass::Find_Definition (definition_id);
+		float da_cost					= (float)cost;
+
 		if (type == TYPE_CHARACTER || type == TYPE_ENLISTED_CHARACTER || type == TYPE_SECRET_CHARACTER) {
 
-			//
-			//	Purchase the character
-			//
-			retval = Purchase_Character (base, player, cost, definition_id);
+			const SoldierGameObjDef *item = (item_def != nullptr && item_def->Get_Class_ID () == CLASSID_GAME_OBJECT_DEF_SOLDIER) ?
+				(const SoldierGameObjDef *)item_def : nullptr;
+			PurchaseStatus status = DAEventManager::Character_Purchase_Request_Event (base, buyer, da_cost, item);
+			if (Purchase_Status_Allows (status, da_cost, cost, retval)) {
+
+				//
+				//	Purchase the character
+				//
+				retval = Purchase_Character (base, player, cost, definition_id);
+				if (retval == PERR_SUCCESS) {
+					DAEventManager::Character_Purchase_Event (buyer, (float)cost, item);
+				}
+			}
 		} else if (type == TYPE_VEHICLE || type == TYPE_SECRET_VEHICLE) {
 
-			//
-			//	Purchase the vehicle
-			//
-			retval = Purchase_Vehicle (base, player, cost, definition_id);
+			const VehicleGameObjDef *item = (item_def != nullptr && item_def->Get_Class_ID () == CLASSID_GAME_OBJECT_DEF_VEHICLE) ?
+				(const VehicleGameObjDef *)item_def : nullptr;
+			PurchaseStatus status = DAEventManager::Vehicle_Purchase_Request_Event (base, buyer, da_cost, item);
+			if (status == PurchaseStatus_AllowNoSpawn) {
+
+				//
+				//	Charge for the vehicle but let the handler deliver it.
+				//
+				cost = (int)da_cost;
+				retval = PERR_NO_FUNDS;
+				if (player->Get_Player_Data () != nullptr && player->Get_Player_Data ()->Get_Money () >= cost) {
+					player->Get_Player_Data ()->Purchase_Item (cost);
+					retval = PERR_SUCCESS;
+					DAEventManager::Vehicle_Purchase_Event (buyer, (float)cost, item);
+				}
+			} else if (Purchase_Status_Allows (status, da_cost, cost, retval)) {
+
+				//
+				//	Purchase the vehicle
+				//
+				retval = Purchase_Vehicle (base, player, cost, definition_id);
+				if (retval == PERR_SUCCESS) {
+					DAEventManager::Vehicle_Purchase_Event (buyer, (float)cost, item);
+				}
+			}
 		} else if (type == TYPE_BEACON) {
 
-			//
-			//	Purchase the beacon powerup
-			//
-			retval = Purchase_Powerup (base, player, cost, definition_id);
+			const PowerUpGameObjDef *item = (item_def != nullptr && item_def->Get_Class_ID () == CLASSID_GAME_OBJECT_DEF_POWERUP) ?
+				(const PowerUpGameObjDef *)item_def : nullptr;
+			PurchaseStatus status = DAEventManager::PowerUp_Purchase_Request_Event (base, buyer, da_cost, item);
+			if (Purchase_Status_Allows (status, da_cost, cost, retval)) {
+
+				//
+				//	Purchase the beacon powerup
+				//
+				retval = Purchase_Powerup (base, player, cost, definition_id);
+				if (retval == PERR_SUCCESS) {
+					DAEventManager::PowerUp_Purchase_Event (buyer, (float)cost, item);
+				}
+			}
 		} else if (type == TYPE_SUPPLY) {
 
-			//
-			//	Grant full health, armor and ammo
-			//
-			Grant_Supplies (player);
-			retval = PERR_SUCCESS;
+			if (DAEventManager::Refill_Event (buyer)) {
+
+				//
+				//	Grant full health, armor and ammo
+				//
+				Grant_Supplies (player);
+				retval = PERR_SUCCESS;
+			} else {
+				retval = PERR_NOT_IN_STOCK;
+			}
 		}
 
 		//

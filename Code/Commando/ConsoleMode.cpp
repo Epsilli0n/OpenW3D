@@ -38,7 +38,6 @@
 #include "consolefunction.h"
 #include "wwdebug.h"
 #include "conio.h"
-#include "slavemaster.h"
 #include <stdio.h>
 #include "systimer.h"
 #include "widestring.h"
@@ -52,6 +51,7 @@
 #include "gamesideservercontrol.h"
 #include "specialbuilds.h"
 #include "ServerSettings.h"
+#include "da_event.h"
 #include <limits>
 #include <filesystem>
 #include <chrono>
@@ -66,10 +66,8 @@ ConsoleModeClass ConsoleBox;
 ** Console title bar text
 */
 #define MASTER_TITLE_BASE "Renegade Master Server"
-#define SLAVE_TITLE_BASE "Renegade Slave Server"
 
 #define MASTER_COLORS (FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY | BACKGROUND_BLUE)
-#define SLAVE_COLORS	 (BACKGROUND_GREEN | BACKGROUND_RED | BACKGROUND_BLUE)
 
 /***********************************************************************************************
  * ConsoleModeClass::ConsoleModeClass -- Class constructor                                     *
@@ -172,15 +170,10 @@ void ConsoleModeClass::Init(void)
 			coord.Y=0;
 
 			/*
-			** Use different colors for master and slaves.
+			** Set the console colors.
 			*/
-			if (!SlaveMaster.Am_I_Slave()) {
-				FillConsoleOutputAttribute(ConsoleOutputHandle, MASTER_COLORS, 4192*50, coord, &written);
-				SetConsoleTextAttribute(ConsoleOutputHandle, MASTER_COLORS);
-			} else {
-				FillConsoleOutputAttribute(ConsoleOutputHandle, SLAVE_COLORS, 4192*50, coord, &written);
-				SetConsoleTextAttribute(ConsoleOutputHandle, SLAVE_COLORS);
-			}
+			FillConsoleOutputAttribute(ConsoleOutputHandle, MASTER_COLORS, 4192*50, coord, &written);
+			SetConsoleTextAttribute(ConsoleOutputHandle, MASTER_COLORS);
 
 			/*
 			** Set the text in the console title bar.
@@ -224,29 +217,6 @@ void ConsoleModeClass::Init(void)
 
 
 /***********************************************************************************************
- * ConsoleModeClass::Get_Slave_Window_By_Title -- Look for a slave window                      *
- *                                                                                             *
- *                                                                                             *
- *                                                                                             *
- * INPUT:    Login name of slave                                                               *
- *           Settings file name of slave                                                       *
- *                                                                                             *
- * OUTPUT:   HWND of slave window                                                              *
- *                                                                                             *
- * WARNINGS: None                                                                              *
- *                                                                                             *
- * HISTORY:                                                                                    *
- *   2/4/2002 1:21PM ST : Created                                                              *
- *=============================================================================================*/
-HWND ConsoleModeClass::Get_Slave_Window_By_Title(char *name, char *settings)
-{
-	StringClass title = Compose_Window_Title(name, settings, true);
-	HWND window = FindWindowA("ConsoleWindowClass", title.Peek_Buffer());
-	return(window);
-}
-
-
-/***********************************************************************************************
  * ConsoleModeClass::Compose_Window_Title -- Build a window title string from name and settings*
  *                                                                                             *
  *                                                                                             *
@@ -261,15 +231,11 @@ HWND ConsoleModeClass::Get_Slave_Window_By_Title(char *name, char *settings)
  * HISTORY:                                                                                    *
  *   2/4/2002 1:19PM ST : Created                                                              *
  *=============================================================================================*/
-StringClass ConsoleModeClass::Compose_Window_Title(char *name, char *settings, bool slave)
+StringClass ConsoleModeClass::Compose_Window_Title(char *name, char *settings)
 {
 	char title[256];
 
-	if (!slave) {
-		strcpy(title, MASTER_TITLE_BASE);
-	} else {
-		strcpy(title, SLAVE_TITLE_BASE);
-	}
+	strcpy(title, MASTER_TITLE_BASE);
 	if (name) {
 		strcat(title, " - ");
 		strcat(title, name);
@@ -302,7 +268,7 @@ StringClass ConsoleModeClass::Compose_Window_Title(char *name, char *settings, b
 void ConsoleModeClass::Set_Title(char *name, char *settings)
 {
 	if (ConsoleOutputHandle) {
-		StringClass title = Compose_Window_Title(name, settings, SlaveMaster.Am_I_Slave());
+		StringClass title = Compose_Window_Title(name, settings);
 		strcpy(Title, title.Peek_Buffer());
 		SetConsoleTitleA(Title);
 	}
@@ -512,6 +478,13 @@ const char *ConsoleModeClass::Get_Log_File_Name(void)
  *=============================================================================================*/
 void ConsoleModeClass::Log_To_Disk(const char *string)
 {
+	//
+	// Everything written to the server log is also Dragonade's console output and renlog, which
+	// the log server (da_log.cpp) streams to bots as 003 and 002 records.
+	//
+	DAEventManager::Ren_Log_Event(string);
+	DAEventManager::Console_Output_Event(string);
+
 	if (ConsoleOutputHandle != INVALID_HANDLE_VALUE) {
 		if (ServerSettingsClass::Get_Disk_Log_Size() > 0) {
    		FILE *log_file = fopen(Get_Log_File_Name(), "at");
@@ -788,22 +761,14 @@ void ConsoleModeClass::Add_Message(WideStringClass *formatted_text, Vector3 *tex
 			}
 		}
 
-		if (!SlaveMaster.Am_I_Slave()) {
-			SetConsoleTextAttribute(ConsoleOutputHandle, color | BACKGROUND_BLUE);
-		} else {
-			SetConsoleTextAttribute(ConsoleOutputHandle, color | BACKGROUND_GREEN | BACKGROUND_RED | BACKGROUND_BLUE);
-		}
+		SetConsoleTextAttribute(ConsoleOutputHandle, color | BACKGROUND_BLUE);
 
 		StringClass string(128, true);
 		formatted_text->Convert_To(string);
 		cprintf("%s", string.Peek_Buffer());
 		Log_To_Disk(string.Peek_Buffer());
 
-		if (!SlaveMaster.Am_I_Slave()) {
-			SetConsoleTextAttribute(ConsoleOutputHandle, MASTER_COLORS);
-		} else {
-			SetConsoleTextAttribute(ConsoleOutputHandle, SLAVE_COLORS);
-		}
+		SetConsoleTextAttribute(ConsoleOutputHandle, MASTER_COLORS);
 
 		/*
 		** Reprint the prompt.
@@ -841,11 +806,7 @@ void ConsoleModeClass::Apply_Attributes(void)
 		COORD pos = info.dwCursorPosition;
 		DWORD written = 0;
 
-		if (!SlaveMaster.Am_I_Slave()) {
-			FillConsoleOutputAttribute(ConsoleOutputHandle, MASTER_COLORS, 5*80, pos, &written);
-		} else {
-			FillConsoleOutputAttribute(ConsoleOutputHandle, SLAVE_COLORS, 5*80, pos, &written);
-		}
+		FillConsoleOutputAttribute(ConsoleOutputHandle, MASTER_COLORS, 5*80, pos, &written);
 	}
 }
 
@@ -919,11 +880,7 @@ void ConsoleModeClass::Update_Profile(StringClass profile_string)
 				** Fill the attributes too, the first time.
 				*/
 				if (LastProfileCRC == 0) {
-					if (!SlaveMaster.Am_I_Slave()) {
-						FillConsoleOutputAttribute(ConsoleOutputHandle, MASTER_COLORS, 20*80, pos, &num_written);
-					} else {
-						FillConsoleOutputAttribute(ConsoleOutputHandle, SLAVE_COLORS, 20*80, pos, &num_written);
-					}
+					FillConsoleOutputAttribute(ConsoleOutputHandle, MASTER_COLORS, 20*80, pos, &num_written);
 				}
 			}
 

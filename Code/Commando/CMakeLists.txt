@@ -103,8 +103,6 @@ set(COMMANDO_SRC
     netinterface.h
     ServerSettings.cpp
     ServerSettings.h
-    slavemaster.cpp
-    slavemaster.h
     apppacketstats.cpp
     apppacketstats.h
     bandwidth.cpp
@@ -232,7 +230,6 @@ set(COMMANDO_SRC
     dlginternetserverlist.h
     dlgmplanhostoptions.cpp
     dlgmplanhostoptions.h
-    dlgmpslaveservers.cpp
     DlgMPTeamSelect.cpp
     DlgMPTeamSelect.h
     dlgmultiplayoptions.cpp
@@ -340,6 +337,15 @@ set(COMMANDO_SRC
     GameSpyBanList.h
     serverbrowser.cpp
     serverbrowser.h
+    da_event.cpp
+    da_event.h
+    da_game.cpp
+    da_game.h
+    da_gamelog.cpp
+    da_log.cpp
+    da_log.h
+    da_settings.cpp
+    da_settings.h
     floodprotectionmgr.cpp
     floodprotectionmgr.h
     modpackage.cpp

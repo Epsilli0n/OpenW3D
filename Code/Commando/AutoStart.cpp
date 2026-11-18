@@ -45,13 +45,13 @@
 #include "Except.h"
 #include "listctrl.h"
 #include "DlgWOLAutoStart.h"
-#include "slavemaster.h"
 #include "gamesideservercontrol.h"
 #include "gamemode.h"
 #include "ConsoleMode.h"
 #include "ServerSettings.h"
 #include "renegadedialogmgr.h"
 #include "openw3d.h"
+#include "ProcessManager.h"
 #include "gamespyadmin.h"
 #include "specialbuilds.h"
 #include <vector>
@@ -235,19 +235,6 @@ void AutoRestartClass::Think(void)
 			}
 
 			/*
-			** Load alternate server settings if required.
-			*/
-			if (SlaveMaster.Am_I_Slave()) {
-				RegistryClass reg(APPLICATION_SUB_KEY_NAME_OPTIONS);
-				char file_name[MAX_PATH];
-				reg.Get_String("MultiplayerSettings", file_name, sizeof(file_name), "");
-				if (strlen(file_name)) {
-					WWDEBUG_SAY(("Loading multiplayer settings from file %s\n", file_name));
-					The_Game()->Set_Ini_Filename(file_name);
-				}
-			}
-
-			/*
 			** Load the game settings.
 			*/
 			The_Game()->Load_From_Server_Config();
@@ -281,8 +268,6 @@ void AutoRestartClass::Think(void)
 				break;
 			}
 
-			SlaveMaster.Startup_Slaves();
-
 			WWASSERT(PTheGameData != nullptr);
 			CampaignManager::Select_Backdrop_Number_By_MP_Type(The_Game()->Get_Game_Type());
 			GameInitMgrClass::Set_Is_Client_Required(false);
@@ -304,11 +289,7 @@ void AutoRestartClass::Think(void)
 			if (can_render && AutoRestartProgressDialogClass::Get_Instance()) {
 				AutoRestartProgressDialogClass::Get_Instance()->End_Dialog();
 			}
-			if (SlaveMaster.Am_I_Slave()) {
-				Stop_Main_Loop (EXIT_SUCCESS);
-			} else {
-				RenegadeDialogMgrClass::Goto_Location (RenegadeDialogMgrClass::LOC_MAIN_MENU);
-			}
+			RenegadeDialogMgrClass::Goto_Location (RenegadeDialogMgrClass::LOC_MAIN_MENU);
 			break;
 
 	}

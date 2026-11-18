@@ -92,7 +92,6 @@ extern char *Build_Registry_Location_String(const char *base, const char *modifi
 #define	APPLICATION_SUB_KEY_NAME_NETOPTIONS				"Networking/Options"
 #define	APPLICATION_SUB_KEY_NAME_NETDEBUG				"Networking/Debug"
 #define	APPLICATION_SUB_KEY_NAME_NET_FIREWALL			"Networking/Firewall"
-#define	APPLICATION_SUB_KEY_NAME_NET_SLAVE				"Networking/Slave"
 #define	APPLICATION_SUB_KEY_NAME_NET_SERVER_CONTROL		"Networking/ServerControl"
 
 #define	COMBAT_SUB_KEY_NAME_DEBUG						APPLICATION_SUB_KEY_NAME_DEBUG

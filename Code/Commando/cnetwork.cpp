@@ -80,7 +80,6 @@
 #include "messagewindow.h"
 #include "wwmemlog.h"
 #include "ConsoleMode.h"
-#include "slavemaster.h"
 #include "gamedataupdateevent.h"
 #include "gamespyadmin.h"
 #include "demosupport.h"
@@ -491,6 +490,11 @@ void cNetwork::Compute_Exe_Key(void)
 	// We now match only on build number.
 	//
 	string.Format("RENEGADE %u", BuildInfoClass::Get_Network_Version_Number());
+	if (BuildInfoClass::Get_Protocol_Revision() != 0) {
+		StringClass revision;
+		revision.Format(" OpenW3D %u", BuildInfoClass::Get_Protocol_Revision());
+		string += revision;
+	}
 
 	WWDEBUG_SAY(("File id string: %s\n", string.Peek_Buffer()));
 	key_string += string;
@@ -637,20 +641,6 @@ void cNetwork::Init_Server(void)
 	} else {
 		WWASSERT(cUserOptions::BandwidthBps.Get() > 0);
 		unsigned int bw = cBandwidth::Get_Bandwidth_Bps_From_Type((BANDWIDTH_TYPE_ENUM)cUserOptions::Get_Bandwidth_Type());
-
-		/*
-		** Only use a portion of the bandwidth based on how many slave servers there are.
-		*/
-		if (The_Game()->IsDedicated.Get() && !SlaveMaster.Am_I_Slave()) {
-			if (cUserOptions::Get_Bandwidth_Type() == BANDWIDTH_AUTO) {
-				if (ServerSettingsClass::Get_Master_Bandwidth() == 0 || ServerSettingsClass::Get_Master_Bandwidth() == 0xffffffff) {
-					int num_slaves = SlaveMaster.Get_Num_Enabled_Slaves();
-					if (num_slaves) {
-						bw = bw / (num_slaves+1);
-					}
-				}
-			}
-		}
 
 		PServerConnection->Set_Bandwidth_Budget_Out(bw);
 		//PServerConnection->Set_Bandwidth_Budget_Out(cUserOptions::BandwidthBps.Get());
@@ -1251,6 +1241,27 @@ void cNetwork::Process_Eviction_Sc(cPacket & packet)
    // a convenience during development
    //
    DIE;
+}
+
+//-----------------------------------------------------------------------------
+// Client-to-server events carry the sender's client ID in their own data. Check it
+// against the client whose packet actually created the object, so one player cannot
+// act as another. Objects made locally (the listen server host) have no packet and pass.
+//-----------------------------------------------------------------------------
+bool cNetwork::Is_Genuine_Sender(NetworkObjectClass * object, int claimed_id)
+{
+	WWASSERT(object != nullptr);
+
+	int real_id = object->Get_Import_Owner();
+	if (real_id == -1 || real_id == claimed_id) {
+		return true;
+	}
+
+	WWDEBUG_SAY(("cNetwork::Is_Genuine_Sender: client %d sent %s claiming to be client %d\n",
+		real_id, cAppPacketStats::Interpret_Type(object->Get_App_Packet_Type()), claimed_id));
+	ConsoleBox.Print("Dropped %s from client %d: it claimed to come from client %d\n",
+		cAppPacketStats::Interpret_Type(object->Get_App_Packet_Type()), real_id, claimed_id);
+	return false;
 }
 
 //-----------------------------------------------------------------------------

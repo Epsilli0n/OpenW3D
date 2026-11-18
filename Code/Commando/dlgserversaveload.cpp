@@ -46,13 +46,11 @@
 #include "assets.h"
 #include "dlgmplanhostoptions.h"
 #include "renegadedialogmgr.h"
-#include "dlgmpslaveservers.h"
 #include <cstdio>
 
 
 DynamicVectorClass<ServerSettingsClass*> ServerSettingsManagerClass::ServerSettingsList;
 
-bool ServerSaveLoadMenuClass::FromSlaveConfig = false;
 const char *DEFAULT_SERVER_SETTINGS_FILE_NAME = "svrcfg_cnc_%04d.ini";
 
 
@@ -75,13 +73,8 @@ ServerSaveLoadMenuClass::ServerSaveLoadMenuClass (void)	:
 void
 ServerSaveLoadMenuClass::On_Init_Dialog (void)
 {
-	if (FromSlaveConfig) {
-		Get_Dlg_Item(IDC_DELETE_BUTTON)->Enable(false);
-		Get_Dlg_Item(IDC_SAVE_BUTTON)->Enable(false);
-	} else {
-		Get_Dlg_Item(IDC_DELETE_BUTTON)->Enable(true);
-		Get_Dlg_Item(IDC_SAVE_BUTTON)->Enable(true);
-	}
+	Get_Dlg_Item(IDC_DELETE_BUTTON)->Enable(true);
+	Get_Dlg_Item(IDC_SAVE_BUTTON)->Enable(true);
 
 	ListCtrlClass *list_ctrl = (ListCtrlClass *)Get_Dlg_Item (IDC_LIST_CTRL);
 	if (list_ctrl != nullptr) {
@@ -157,10 +150,7 @@ ServerSaveLoadMenuClass::On_Command (int ctrl_id, int message_id, unsigned int p
 
 void ServerSaveLoadMenuClass::Next_Dialog(void)
 {
-	if (FromSlaveConfig) {
-	} else {
-		START_DIALOG(MPLanHostOptionsMenuClass);
-	}
+	START_DIALOG(MPLanHostOptionsMenuClass);
 }
 
 
@@ -228,18 +218,10 @@ ServerSaveLoadMenuClass::Load_Config (void)
 		ServerSettingsClass *config = (ServerSettingsClass *)list_ctrl->Get_Entry_Data(curr_sel, 0);
 		if (config != nullptr) {
 
-			if (FromSlaveConfig) {
-				//
-				// Inform the slave settings dialog of the choice.
-				//
-				SlaveServerDialogClass::Set_Slave_Settings(&config->RawFileName);
-			} else {
-
-				//
-				//	Load this configuration
-				//
-				ServerSettingsManagerClass::Load_Settings(config);
-			}
+			//
+			//	Load this configuration
+			//
+			ServerSettingsManagerClass::Load_Settings(config);
 
 			End_Dialog ();
 			Next_Dialog();

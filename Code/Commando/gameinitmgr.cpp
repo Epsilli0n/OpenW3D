@@ -70,7 +70,6 @@
 #include "AutoStart.h"
 #include "wwmemlog.h"
 #include "gamesideservercontrol.h"
-#include "slavemaster.h"
 #include "hud.h"
 #include "gamespyadmin.h"
 #include "ServerSettings.h"
@@ -334,11 +333,6 @@ GameInitMgrClass::End_Game (void)
 	//	Notify the game data object that the game is over
 	//
 	cGameData* theGame = PTheGameData;
-
-	//
-	// Shut down slave game servers.
-	//
-	SlaveMaster.Shutdown_Slaves();
 
 	//
 	// Stop listening for server control messages.

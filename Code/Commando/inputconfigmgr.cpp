@@ -45,7 +45,6 @@
 #include "pathutil.h"
 #include "translatedb.h"
 #include "string_ids.h"
-#include "slavemaster.h"
 
 
 ////////////////////////////////////////////////////////////////
@@ -110,9 +109,7 @@ InputConfigMgrClass::Shutdown (void)
 	//
 	//	Save our current configuration list
 	//
-	if (!SlaveMaster.Am_I_Slave()) {
-		Save ();
-	}
+	Save ();
 
 	//
 	//	Reset our data

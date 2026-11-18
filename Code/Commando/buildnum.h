@@ -58,6 +58,13 @@ class BuildInfoClass
 		** Gets the 32 bit build number.
 		*/
 		static unsigned int Get_Network_Version_Number(void);
+
+		/*
+		** OpenW3D's own network protocol revision. Part of the join key, so clients and servers
+		** with different revisions cannot join each other. The stock version above stays as it is
+		** because it is reported to the server list as gamever.
+		*/
+		static unsigned int Get_Protocol_Revision(void);
 		
 		/*
 		** Gets the 32 bit build number.

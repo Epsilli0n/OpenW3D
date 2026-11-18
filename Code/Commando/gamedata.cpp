@@ -94,6 +94,7 @@
 #include "specialbuilds.h"
 #include "demosupport.h"
 #include "specialbuilds.h"
+#include "da_event.h"
 #include <winsock2.h>
 
 const int cGameData::MAX_TIME_LIMIT       = 999;
@@ -110,7 +111,8 @@ static unsigned renderer_gameplay_color;
 //
 // Class statics
 //
-const StringClass			cGameData::INI_SECTION_NAME	= "Settings";
+StringClass					cGameData::INI_SECTION_NAME	= "Settings";
+StringClass					cGameData::ServerConfigPath;
 const float					cGameData::LIMITS_X_POS			= 0.8f;
 Render2DSentenceClass	*		cGameData::PTextRenderer		= nullptr;
 int							cGameData::HostedGameNumber	= 0;
@@ -171,6 +173,7 @@ cGameData::cGameData(void)	:
 	CanRepairBuildings.Set(			true);
 	DriverIsAlwaysGunner.Set(		true);
 	SpawnWeapons.Set(					false);
+	RequireOpponent.Set(				true);
 
 	mWinnerID							= -1;
 	MaxPlayers							= 16;
@@ -234,6 +237,7 @@ cGameData& cGameData::operator=(const cGameData& rhs)
 	CanRepairBuildings				= rhs.CanRepairBuildings;
 	DriverIsAlwaysGunner				= rhs.DriverIsAlwaysGunner;
 	SpawnWeapons						= rhs.SpawnWeapons;
+	RequireOpponent					= rhs.RequireOpponent;
    Password								= rhs.Password;
 	GameTitle							= rhs.GameTitle;
 	Motd									= rhs.Motd;
@@ -906,6 +910,7 @@ void cGameData::Export_Tier_2_Data(cPacket & packet)
 	packet.Add(IsFreeWeapons.Get());
 	packet.Add(IsClientTrusted.Get());
 	packet.Add(RemixTeams.Get());
+	packet.Add(RequireOpponent.Get());
 
 	if (Is_Cnc()) {
 		packet.Add(CanRepairBuildings.Get());
@@ -931,6 +936,7 @@ void cGameData::Import_Tier_2_Data(cPacket & packet)
 	IsFreeWeapons.Set(							packet.Get(b_placeholder));
 	IsClientTrusted.Set(							packet.Get(b_placeholder));
 	RemixTeams.Set(								packet.Get(b_placeholder));
+	RequireOpponent.Set(							packet.Get(b_placeholder));
 
 	if (Is_Cnc()) {
 		CanRepairBuildings.Set(					packet.Get(b_placeholder));
@@ -944,15 +950,41 @@ void cGameData::Import_Tier_2_Data(cPacket & packet)
 }
 
 //-----------------------------------------------------------------------------
+void cGameData::Use_Server_Config_File(const char * path, const char * section)
+{
+	ServerConfigPath = (path != nullptr) ? path : "";
+	INI_SECTION_NAME = (section != nullptr && section[0] != '\0') ? section : "Settings";
+}
+
+//-----------------------------------------------------------------------------
+bool cGameData::Is_Server_Config_File(const char * config_file)
+{
+	return !ServerConfigPath.Is_Empty() && config_file != nullptr && ServerConfigPath.Compare_No_Case(config_file) == 0;
+}
+
+//-----------------------------------------------------------------------------
+INIClass * cGameData::Open_Config_INI(const char * config_file)
+{
+	if (Is_Server_Config_File(config_file)) {
+		RawFileClass file(ServerConfigPath);
+		if (file.Is_Available()) {
+			return new INIClass(file);
+		}
+		return nullptr;
+	}
+	return Get_INI(config_file);
+}
+
+//-----------------------------------------------------------------------------
 void cGameData::Load_From_Server_Config(const char * config_file)
 {
 	WWASSERT(config_file != nullptr);
    WWASSERT(cMiscUtil::Is_String_Different(config_file, ""));
 
-   INIClass * p_ini = Get_INI(config_file);
+   INIClass * p_ini = Open_Config_INI(config_file);
 	StringClass full_filename(config_file, true);
 
-	if (p_ini == nullptr) {
+	if (p_ini == nullptr && !Is_Server_Config_File(config_file)) {
       full_filename.Format("data/%s", config_file);
       FILE * file = fopen(full_filename, "w");
 	   fclose(file);
@@ -960,6 +992,9 @@ void cGameData::Load_From_Server_Config(const char * config_file)
 		p_ini = Get_INI(config_file);
    }
 	WWASSERT(p_ini != nullptr);
+	if (p_ini == nullptr) {
+		return;
+	}
 
 	LastServerConfigModTime = Get_Config_File_Mod_Time();
 
@@ -1032,6 +1067,9 @@ void cGameData::Load_From_Server_Config(const char * config_file)
 
 	b = p_ini->Get_Bool(	INI_SECTION_NAME, "SpawnWeapons",				SpawnWeapons.Get());
 	SpawnWeapons.Set(b);
+
+	b = p_ini->Get_Bool(	INI_SECTION_NAME, "RequireOpponent",			RequireOpponent.Get());
+	RequireOpponent.Set(b);
 
 	//
 	// Disguise "IsClientTrusted" with something that sounds like you need it but
@@ -1120,6 +1158,7 @@ void cGameData::Save_To_Server_Config(const char * config_file)
 	p_ini->Put_Bool(			INI_SECTION_NAME, "CanRepairBuildings",		CanRepairBuildings.Get());
 	p_ini->Put_Bool(			INI_SECTION_NAME, "DriverIsAlwaysGunner",		DriverIsAlwaysGunner.Get());
 	p_ini->Put_Bool(			INI_SECTION_NAME, "SpawnWeapons",				SpawnWeapons.Get());
+	p_ini->Put_Bool(			INI_SECTION_NAME, "RequireOpponent",			RequireOpponent.Get());
 	//p_ini->Put_Bool(			INI_SECTION_NAME, "IsClientTrusted",			IsClientTrusted.Get());
 	p_ini->Put_Bool(			INI_SECTION_NAME, "UseLagReduction",			IsClientTrusted.Get());
    p_ini->Put_Wide_String(	INI_SECTION_NAME, "wGameTitle",					Get_Game_Title());
@@ -1461,7 +1500,7 @@ bool cGameData::Has_Config_File_Changed(void)
 //-----------------------------------------------------------------------------
 unsigned int cGameData::Get_Config_File_Mod_Time(void)
 {
-	StringClass full_filename(IniFilename, true);
+	StringClass full_filename(Is_Server_Config_File(IniFilename) ? ServerConfigPath : IniFilename, true);
 	RawFileClass file(full_filename);
 
 	if (!file.Is_Available()) {
@@ -1542,6 +1581,12 @@ void cGameData::Game_Over_Processing(void)
 	}
 
 	mWinnerID = winning_team;
+
+	//
+	// Dragonade game over handlers read the winner, win type and duration, so they run
+	// once those are set. The map has already rotated; they use the map that was played.
+	//
+	DAEventManager::Game_Over_Event();
 
 	cWinEvent * p_win = new cWinEvent;
 	p_win->Init(mWinnerID, PLAYER_ID_UNKNOWN, IsMapCycleOver);

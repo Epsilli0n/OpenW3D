@@ -47,6 +47,8 @@
 #include "damage.h"
 #include "armedgameobj.h"
 #include "debug.h"
+#include "smartgameobj.h"
+#include "wwmath.h"
 
 DECLARE_NETWORKOBJECT_FACTORY(cCsDamageEvent, NETCLASSID_CSDAMAGEEVENT);
 
@@ -111,6 +113,23 @@ cCsDamageEvent::Act
 		if ( obj ) {
 			// Make an offense object
 			PhysicalGameObj * damager = GameObjManager::Find_PhysicalGameObj( DamagerGOID );
+
+			//
+			// A client only reports damage done by an object it controls (its soldier); see
+			// DefenseObjectClass::Apply_Damage, which the server mirrors by ignoring its own
+			// damage from those objects. Drop reports for any other damager, and values that
+			// are not numbers or name no warhead.
+			//
+			if ( damager != nullptr && Get_Import_Owner() != -1 ) {
+				SmartGameObj * smart_damager = damager->As_SmartGameObj();
+				if ( smart_damager == nullptr || smart_damager->Get_Control_Owner() != Get_Import_Owner() ||
+					  !WWMath::Is_Valid_Float( Damage ) ||
+					  Warhead < 0 || Warhead >= ArmorWarheadManager::Get_Num_Warhead_Types() ) {
+					Debug_Say(( "cCsDamageEvent: dropped damage from client %d (damager %d)\n", Get_Import_Owner(), DamagerGOID ));
+					damager = nullptr;
+				}
+			}
+
 			if ( damager != nullptr && damager->As_ArmedGameObj() != nullptr ) {
 				OffenseObjectClass offense( Damage, Warhead, damager->As_ArmedGameObj());
 

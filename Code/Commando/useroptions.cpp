@@ -38,7 +38,6 @@
 #include <string.h>
 #include "trim.h"
 #include "singletoninstancekeeper.h"
-#include "slavemaster.h"
 #include "debug.h"
 #include "rawfile.h"
 #include "ServerSettings.h"
@@ -164,20 +163,6 @@ cUserOptions::ParseResult cUserOptions::Parse_Command_Line(int argc, char *argv[
 			}
 			fprintf(stderr, "%s", "Registry modifiers (--regmod) have been deprecated, use --ini instead. \n");
 			retcode = FAILURE;
-			continue;
-		}
-
-		if (strcmp(cmd, "--slave") == 0) {
-			SlaveMaster.Set_Slave_Mode(true);
-			DebugManager::Set_Is_Slave(true);
-
-			// Save out process ID so our master server can find us.
-			RegistryClass reg(APPLICATION_SUB_KEY_NAME);
-			if (reg.Is_Valid()) {
-				reg.Set_Int("ProcessId", GetCurrentProcessId());
-			}
-
-			RegistryClass::Set_Read_Only(true);
 			continue;
 		}
 
@@ -321,7 +306,7 @@ void cUserOptions::Print_Command_Line_Help(bool error)
 
 	auto exe_file = cPathUtil::GetExecutableFile().filename();
 	
-	fprintf(file, "usage: %s [--ip IP] [--multi] [--regmod MOD] [--slave] [--startserver INI]\n", exe_file.string().c_str());
+	fprintf(file, "usage: %s [--ip IP] [--multi] [--regmod MOD] [--startserver INI]\n", exe_file.string().c_str());
 	fprintf(file, "    [--gamedir PATH]\n");
 	fprintf(file, "    [--ini PATH]\n");
 	fprintf(file, "    [--internetserver INI] [--nodx]\n");

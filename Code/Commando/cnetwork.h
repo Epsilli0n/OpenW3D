@@ -95,6 +95,7 @@ public:
    static void Connection_Handler(int new_rhost_id);
 	static REFUSAL_CODE Application_Acceptance_Handler(cPacket & packet);
    static void Eviction_Handler(int evicted_rhost_id);
+	static bool Is_Genuine_Sender(NetworkObjectClass * object, int claimed_id);
 
    static bool I_Am_Client(void)				{return PClientConnection != nullptr;}
    static bool I_Am_Server(void)				{return PServerConnection != nullptr;}

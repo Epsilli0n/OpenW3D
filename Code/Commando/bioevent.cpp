@@ -51,6 +51,7 @@
 #include "ConsoleMode.h"
 #include "winevent.h"
 #include "gamespyadmin.h"
+#include "da_event.h"
 
 DECLARE_NETWORKOBJECT_FACTORY(cBioEvent, NETCLASSID_BIOEVENT);
 
@@ -158,6 +159,8 @@ cBioEvent::Act(void)
 			Nickname.Convert_To(str);
 			ConsoleBox.Print_Maybe("Player %s joined the game\n", str.Peek_Buffer());
 
+			DAEventManager::Player_Join_Event(p_player);
+
 			//
 			// If we (the server) are already in intermission mode then deactivate the player until the next map starts. The player
 			// will have already loaded the next map. ST - 1/17/2002 7:43PM
@@ -230,6 +233,11 @@ cBioEvent::Import_Creation(BitStreamClass & packet)
 	WWASSERT(SenderId > 0);
 
 	WWDEBUG_SAY(("cBioEvent recd\n"));
+
+	if (!cNetwork::Is_Genuine_Sender(this, SenderId)) {
+		Set_Delete_Pending();
+		return;
+	}
 
 	Act();
 }

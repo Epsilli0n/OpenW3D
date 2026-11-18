@@ -188,6 +188,13 @@ public:
 	bool					Belongs_To_Client(int client_id);
 
 	//
+	// Server side: the client whose packet created this object (client-to-server events),
+	// or -1 when the object was made locally.
+	//
+	void					Set_Import_Owner(int client_id)						{ ImportOwner = client_id; }
+	int					Get_Import_Owner(void) const							{ return ImportOwner; }
+
+	//
 	// Per client update functions.
 	//
 	unsigned char		Get_Frequent_Update_Export_Size(void)						{return(FrequentExportPacketSize);}
@@ -270,6 +277,8 @@ private:
 	float					CachedPriority_2[MAX_CLIENT_COUNT];
 
 	bool					UnreliableOverride;
+
+	int					ImportOwner;
 
 	static bool			IsServer;
 };

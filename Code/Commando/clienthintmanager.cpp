@@ -180,7 +180,7 @@ cClientHintManager::Think
 	//
 	// Sort the object list. Lowest priority first.
 	//
-	qsort(object_list, num_objects, sizeof(unsigned int), (int (*)(const void *,const void *)) &Priority_Compare);
+	qsort(object_list, num_objects, sizeof(object_list[0]), (int (*)(const void *,const void *)) &Priority_Compare);
 
 
 	//

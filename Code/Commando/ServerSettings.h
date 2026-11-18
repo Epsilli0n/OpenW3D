@@ -36,8 +36,6 @@
 
 #include <win.h>
 
-class StringClass;
-
 
 class ServerSettingsClass
 {
@@ -54,13 +52,16 @@ class ServerSettingsClass
 		static bool Is_Server_Settings_File_Set(void) {return((SettingsFile[0] == 0) ? false : true);}
 		static bool Parse(bool apply = false);
 		static bool Is_Command_Line_Mode(void) {return(IsActive);}
-		static void Encrypt_Serial(StringClass serial_in, StringClass &serial_out, bool encrypt = true);
-		static void Decrypt_Serial(StringClass serial_in, StringClass &serial_out);
 		static const char *Get_Master_Server_Password(void) {return(MasterPassword);}
 		static unsigned int Get_Master_Bandwidth(void) {return(MasterBandwidth);}
 		static bool Is_Active(void) {return(IsActive);}
 		static char *Get_Settings_File_Name(void) {return(SettingsFile);}
 		static bool Check_Game_Settings_File(char *config_file);
+
+		/*
+		** Writes a commented default settings file if none exists. Returns true if it wrote one.
+		*/
+		static bool Write_Default_Settings_File(const char *filename);
 		static GameModeTypeEnum Get_Game_Mode(void) {return(GameMode);}
 		static int Get_Disk_Log_Size(void) {return(DiskLogSize);}
 

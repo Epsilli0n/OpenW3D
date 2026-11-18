@@ -180,8 +180,6 @@ public:
 	static	bool	Is_Diag_Logging_Enabled( void )		{ return EnableDiagLogging; }
 	static	bool	Load_Debug_Scripts( void )				{ return LoadDebugScripts; }
 
-	static	void	Set_Is_Slave(bool isslave) {IsSlave = isslave;}
-
 	static	bool	Allow_Cinematic_Keys( void )	{ return AllowCinematicKeys; };
 
 private:
@@ -196,8 +194,6 @@ private:
 
 	static	DebugDisplayHandlerClass * DisplayHandler;
    static	const char *LOGFILE;
-	static	char	LogfileNameBuffer[256];
-	static	bool	IsSlave;
 
 	/*
 	** Thread safety

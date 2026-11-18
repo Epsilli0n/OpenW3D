@@ -46,6 +46,7 @@
 #include "player.h"
 #include "playermanager.h"
 #include "rawfile.h"
+#include "ServerSettings.h"
 #include "systimer.h"
 #include "team.h"
 #include "teammanager.h"
@@ -81,6 +82,7 @@ constexpr unsigned int BANLIST_RELOAD_MS = 60 * 1000;
 constexpr size_t MAX_PART_LENGTH = 400;
 constexpr const char *CUSTOM_RULES_FILE = "gamespy_rules.ini";
 constexpr const char *CUSTOM_RULES_SECTION = "GamespyRules";
+constexpr const char *SERVER_RULES_SECTION = "ListingRules";
 
 /*
 ** Keys and values cannot contain the separator.
@@ -617,20 +619,35 @@ void CGameSpyQnR::Load_Custom_Rules(void)
 	LastCustomRulesLoad = TIMEGETTIME();
 	CustomRules.clear();
 
+	/*
+	** Prefer a [ListingRules] section in the server settings file, so everything is in one place. TT's
+	** separate gamespy_rules.ini still works.
+	*/
+	const char *section = CUSTOM_RULES_SECTION;
 	RawFileClass file(CUSTOM_RULES_FILE);
+	if (ServerSettingsClass::Is_Active()) {
+		RawFileClass server_file(ServerSettingsClass::Get_Settings_File_Name());
+		if (server_file.Is_Available()) {
+			INIClass server_ini(server_file);
+			if (server_ini.Section_Present(SERVER_RULES_SECTION)) {
+				file.Set_Name(ServerSettingsClass::Get_Settings_File_Name());
+				section = SERVER_RULES_SECTION;
+			}
+		}
+	}
 	if (!file.Is_Available()) {
 		return;
 	}
 
 	INIClass ini(file);
-	const int count = ini.Entry_Count(CUSTOM_RULES_SECTION);
+	const int count = ini.Entry_Count(section);
 	for (int i = 0; i < count; ++i) {
-		const char *key = ini.Get_Entry(CUSTOM_RULES_SECTION, i);
+		const char *key = ini.Get_Entry(section, i);
 		if (!key) {
 			continue;
 		}
 		char value[256] = {};
-		ini.Get_String(CUSTOM_RULES_SECTION, key, "", value, sizeof(value));
+		ini.Get_String(section, key, "", value, sizeof(value));
 		const std::string clean_key = Clean(key);
 		if (!clean_key.empty() && clean_key != Get_Compatibility_Key()) {
 			CustomRules.emplace_back(clean_key, Clean(value));

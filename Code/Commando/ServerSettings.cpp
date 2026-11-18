@@ -36,7 +36,6 @@
 
 
 #include "ServerSettings.h"
-#include "slavemaster.h"
 #include "wwdebug.h"
 #include <limits>
 #include "gamedata.h"
@@ -62,9 +61,7 @@
 
 const char *ConfigSettingsName = "Config";
 const char *MasterServerSection = "Server";
-const char *SlaveServerSection = "Slave";
-
-#define ENCRYPTION_STRING_LENGTH				128
+const char *GameSettingsSection = "Game";
 
 char ServerSettingsClass::SettingsFile[MAX_PATH];
 bool ServerSettingsClass::IsActive = false;
@@ -119,13 +116,6 @@ void ServerSettingsClass::Set_Settings_File_Name(char *filename)
 bool ServerSettingsClass::Parse(bool apply)
 {
 	char master_settings[MAX_PATH];
-	char slave_settings[MAX_PATH];
-	char slave_section[256];
-	char slave_nick[128];
-	char slave_serial[128];
-	char slave_pass[128];
-	int slave_port;
-	int slave_bw;
 	int master_bw;
 	char remote_admin_pass[128];
 	char game_type[32];
@@ -161,12 +151,6 @@ bool ServerSettingsClass::Parse(bool apply)
 		*/
 		INIClass ini(file);
 		ini.Get_String(MasterServerSection, ConfigSettingsName, "", master_settings, sizeof(master_settings));
-		if (strlen(master_settings) == 0) {
-			if (apply) {
-				WWDEBUG_SAY(("No master server settings specified - using defaults\n"));
-				ConsoleBox.Print("No master server settings specified - using defaults\n");
-			}
-		}
 
 		/*
 		** Load the master server settings from the ini file.
@@ -209,12 +193,41 @@ bool ServerSettingsClass::Parse(bool apply)
 	GameSpyQnR.Parse_HeartBeat_List(heartbeat_list, false);
 
 		/*
+		** Game settings live in the [Game] section of this file. Older setups keep them in a separate
+		** data\svrcfg_*.ini named by Config; that still works.
+		*/
+		if (ini.Section_Present(GameSettingsSection)) {
+			cGameData::Use_Server_Config_File(SettingsFile, GameSettingsSection);
+			if (!Check_Game_Settings_File(SettingsFile)) {
+				WWDEBUG_SAY(("Game settings in '%s' not usable\n", SettingsFile));
+				ConsoleBox.Print("Error - the [%s] section of '%s' contains errors - aborting\n", GameSettingsSection, SettingsFile);
+				ConsoleBox.Wait_For_Keypress();
+				return(false);
+			}
+			if (apply && The_Game()) {
+				The_Game()->Set_Ini_Filename(SettingsFile);
+			}
+		} else {
+			if (strlen(master_settings) == 0) {
+				strcpy(master_settings, "svrcfg_cnc.ini");
+			}
+			if (apply) {
+				ConsoleBox.Print("Reading game settings from data\\%s. Move them into a [%s] section of %s to keep everything in one file.\n",
+					master_settings, GameSettingsSection, SettingsFile);
+			}
+		}
+
+		/*
 		** Make sure the master server settings file is there.
 		*/
 		char filename[MAX_PATH];
 		sprintf(filename, "data\\%s", master_settings);
 		file.Set_Name(filename);
-		if (!file.Is_Available()) {
+		if (ini.Section_Present(GameSettingsSection)) {
+			/*
+			** Already checked above.
+			*/
+		} else if (!file.Is_Available()) {
 			WWDEBUG_SAY(("Server settings file '%s' not found\n", filename));
 			ConsoleBox.Print("Error - server settings file '%s' not found - aborting\n", filename);
 			ConsoleBox.Wait_For_Keypress();;
@@ -397,206 +410,105 @@ bool ServerSettingsClass::Parse(bool apply)
 				}
 			}
 		//}
-
-
-
-		if (apply) {
-			SlaveMaster.Reset();
-		}
-
-		/*
-		** Read the slave server info.
-		*/
-		for (int i=0 ; i<MAX_SLAVES ; i++) {
-
-			slave_settings[0] = 0;
-			slave_nick[0] = 0;
-			slave_serial[0] = 0;
-			slave_port = 0;
-			slave_bw = 0xffffffff;
-
-			/*
-			** See if this slave is enabled in the .ini
-			*/
-			sprintf(slave_section, "%s%d", SlaveServerSection, i+1);
-			bool enabled = ini.Get_Bool(slave_section, "Enable", false);
-
-			if (enabled) {
-
-				/*
-				** Make sure the slaves config file is present.
-				*/
-				ini.Get_String(slave_section, ConfigSettingsName, "", slave_settings, sizeof(slave_settings));
-				if (strlen(slave_settings) != 0) {
-					sprintf(filename, "data\\%s", slave_settings);
-					file.Set_Name(filename);
-					if (!file.Is_Available()) {
-						WWDEBUG_SAY(("Slave server settings file '%s' not found\n", filename));
-						ConsoleBox.Print("Error - Slave server settings file '%s' not found - aborting\n", filename);
-						ConsoleBox.Wait_For_Keypress();;
-						return(false);
-					} else {
-						if (!Check_Game_Settings_File(slave_settings)) {
-							WWDEBUG_SAY(("Server settings file '%s' not usable\n", slave_settings));
-							ConsoleBox.Print("Error - server settings file '%s' contains errors - aborting\n", slave_settings);
-							ConsoleBox.Wait_For_Keypress();;
-							return(false);
-						}
-					}
-				}
-
-				/*
-				** Optional slave name and serial.
-				*/
-				ini.Get_String(slave_section, "Nickname", "", slave_nick, sizeof(slave_nick));
-				ini.Get_String(slave_section, "Serial", "", slave_serial, sizeof(slave_serial));
-
-				/*
-				** Get the password.
-				*/
-				ini.Get_String(slave_section, "Password", "", slave_pass, sizeof(slave_pass));
-
-				/*
-				** Get the port number.
-				*/
-				slave_port = ini.Get_Int(slave_section, "Port", 0);
-
-				if (slave_port < 0 || slave_port > 0xffff) {
-					WWDEBUG_SAY(("Error - Invalid port number %d specified for slave %d - aborting\n", slave_port, i+1));
-					ConsoleBox.Print("Error - Invalid port number %d specified for slave %d - aborting\n", slave_port, i+1);
-					ConsoleBox.Wait_For_Keypress();;
-					return(false);
-				}
-
-				/*
-				** Get the bandwidth allowance.
-				*/
-				slave_bw = ini.Get_Int(slave_section, "BandwidthUp", 0xffffffff);
-				if (slave_bw != 0 && slave_bw != 0xffffffff && slave_bw < 33600) {
-					WWDEBUG_SAY(("Error - Insufficient bandwidth specified for slave %d - aborting\n", i+1));
-					ConsoleBox.Print("Error - Insufficient bandwidth specified for slave %d - aborting\n", i+1);
-					ConsoleBox.Wait_For_Keypress();;
-					return(false);
-				}
-			}
-
-			/*
-			** Apply the settings.
-			*/
-			if (apply) {
-				SlaveMaster.Add_Slave(enabled, slave_nick, slave_serial, (unsigned short)slave_port, slave_settings, slave_bw, slave_pass);
-			}
-		}
-		if (apply) {
-			SlaveMaster.Save();
-		}
 	}
 	return(true);
 }
 
 
 
+/*
+** Commented default server file. Everything the dedicated server reads lives here: network and listing
+** settings in [Server], game rules and the map rotation in [Game], extra server list rules in [ListingRules].
+*/
+static const char DefaultSettingsFile[] =
+	"; OpenW3D dedicated server settings. Everything the server reads is in this one file.\r\n"
+	"; Changes to [Game] are picked up when the current map ends.\r\n"
+	"\r\n"
+	"[Server]\r\n"
+	"; LAN hosts on the local network only. GameSpy also lists the server on the community master servers.\r\n"
+	"GameType = LAN\r\n"
+	"; Game port (UDP). 0 uses 4848.\r\n"
+	"GameSpyGamePort = 0\r\n"
+	"; Server list query port (UDP). 0 uses 25300. Forward both ports to list the server from behind a router.\r\n"
+	"GameSpyQueryPort = 0\r\n"
+	"; Master servers to report to, comma separated host[:port]. Leave out to use the community masters.\r\n"
+	"; HeartBeatServers =\r\n"
+	"; Upstream bandwidth in bits per second. 0 means unlimited.\r\n"
+	"BandwidthUp = 0\r\n"
+	"; Network updates per second sent to each client (5-30).\r\n"
+	"NetUpdateRate = 8\r\n"
+	"; Days of console log files to keep.\r\n"
+	"DiskLogSize = 7\r\n"
+	"; Remote administration (RenRem protocol). Without it the server only listens on the local machine.\r\n"
+	"AllowRemoteAdmin = false\r\n"
+	"RemoteAdminPassword =\r\n"
+	"RemoteAdminIP =\r\n"
+	"RemoteAdminPort =\r\n"
+	"\r\n"
+	"[Game]\r\n"
+	"bGameTitle = OpenW3D Server\r\n"
+	"bMotd =\r\n"
+	"IsPassworded = no\r\n"
+	"bPassword =\r\n"
+	"MaxPlayers = 16\r\n"
+	"TimeLimitMinutes = 30\r\n"
+	"StartingCredits = 0\r\n"
+	"; 0 none, 1 team, 2 all\r\n"
+	"RadarMode = 1\r\n"
+	"IsFriendlyFirePermitted = no\r\n"
+	"IsTeamChangingAllowed = no\r\n"
+	"RemixTeams = yes\r\n"
+	"CanRepairBuildings = yes\r\n"
+	"DriverIsAlwaysGunner = yes\r\n"
+	"SpawnWeapons = no\r\n"
+	"; no lets the game run with players on one team only (gameplay is otherwise pending)\r\n"
+	"RequireOpponent = yes\r\n"
+	"BaseDestructionEndsGame = yes\r\n"
+	"BeaconPlacementEndsGame = yes\r\n"
+	"UseLagReduction = yes\r\n"
+	"IsAutoRestart = yes\r\n"
+	"; Map rotation, MapName00 to MapName99. MapName is the first map.\r\n"
+	"DoMapsLoop = yes\r\n"
+	"MapName = C&C_Field.mix\r\n"
+	"MapName00 = C&C_Field.mix\r\n"
+	"MapName01 = C&C_Volcano.mix\r\n"
+	"MapName02 = C&C_Under.mix\r\n"
+	"MapName03 = C&C_Walls.mix\r\n"
+	"MapName04 = C&C_City.mix\r\n"
+	"MapName05 = C&C_Canyon.mix\r\n"
+	"MapName06 = C&C_Hourglass.mix\r\n"
+	"MapName07 = C&C_Mesa.mix\r\n"
+	"MapName08 = C&C_Islands.mix\r\n"
+	"MapName09 = C&C_Complex.mix\r\n"
+	"\r\n"
+	"[ListingRules]\r\n"
+	"; Extra key = value pairs shown in server lists, for example:\r\n"
+	"; Owner = Someone\r\n"
+	"; Discord = discord.gg/example\r\n"
+	"\r\n"
+	"[General]\r\n"
+	"; Dragonade settings (da.ini's [General]). A [C&C_Field.mix] style section overrides them per map.\r\n"
+	"; TCP port for server bots (BRenBot and others written for Dragonade or SSGM). 0 turns it off.\r\n"
+	"LogPort = 0\r\n"
+	"; Address the bot port listens on. Anything a connected bot sends runs as a server console\r\n"
+	"; command, so keep this on 127.0.0.1 unless the bot runs on another trusted machine.\r\n"
+	"LogIP = 127.0.0.1\r\n"
+	"; Send the SSGM gamelog (001 lines) to bots.\r\n"
+	"EnableGameLog = 1\r\n";
 
-
-
-/***********************************************************************************************
- * ServerSettingsClass::Encrypt_Serial -- Serial number encryption/decryption                  *
- *                                                                                             *
- *                                                                                             *
- *                                                                                             *
- * INPUT:    Input serial number                                                               *
- *           Reference to output serial number                                                 *
- *           Encrypt flag - true to encrypt, false to decrypt                                  *
- *                                                                                             *
- * OUTPUT:   Nothing                                                                           *
- *                                                                                             *
- * WARNINGS: None                                                                              *
- *                                                                                             *
- * HISTORY:                                                                                    *
- *   2/1/2002 12:08PM ST : Created                                                             *
- *=============================================================================================*/
-void ServerSettingsClass::Encrypt_Serial(StringClass serial_in, StringClass &serial_out, bool encrypt)
+bool ServerSettingsClass::Write_Default_Settings_File(const char *filename)
 {
-	char *s;
-	const size_t numberlength = serial_in.Get_Length();
-	DWORD bytesread;
-	char stringbuffer[ENCRYPTION_STRING_LENGTH];
-	size_t p;
-
-	WWASSERT(numberlength);
-
-	s = new char [numberlength + 1];
-	memcpy(s, serial_in.Peek_Buffer(), numberlength + 1);
-
-	/*
-	** See if the key file is available. If not, don't bother encrypting.
-	*/
-	HANDLE handle = CreateFileA ("woldata.key", GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, nullptr);
-	if (handle == INVALID_HANDLE_VALUE) {
-		delete [] s;
-		serial_out = serial_in;
-		return;
+	RawFileClass file(filename);
+	if (file.Is_Available()) {
+		return(false);
 	}
-
-	/*
-	** Read the key.
-	*/
-	if (!ReadFile(handle, stringbuffer, sizeof (stringbuffer), &bytesread, nullptr)) {
-		WWDEBUG_SAY(("Unable to read serial encryption key file\n"));
-		delete [] s;
-		serial_out = serial_in;
-		return;
+	if (!file.Open(RawFileClass::WRITE)) {
+		return(false);
 	}
-
-	int sign = encrypt ? 1 : -1;
-
-	p = 0;
-	for (unsigned i = 0; i < ENCRYPTION_STRING_LENGTH; i++) {
-
-		int  t;
-		char c;
-
-		t  = s[p] - '0';
-		t %= 10;
-		t += (sign * stringbuffer[i]);
-		t += 1000;
-		t %= 10;
-		c  = char(t + '0');
-		s[p] = c;
-		p++;
-		if (p == numberlength) {
-			p = 0;
-		}
-	}
-
-	serial_out = StringClass(s, true);
-
-	delete [] s;
+	file.Write(DefaultSettingsFile, sizeof(DefaultSettingsFile) - 1);
+	file.Close();
+	return(true);
 }
-
-
-
-
-/***********************************************************************************************
- * ServerSettingsClass::Decrypt_Serial -- Serial number decryption                             *
- *                                                                                             *
- *                                                                                             *
- *                                                                                             *
- * INPUT:    Input serial number                                                               *
- *           Reference to output serial number                                                 *
- *                                                                                             *
- * OUTPUT:   Nothing                                                                           *
- *                                                                                             *
- * WARNINGS: None                                                                              *
- *                                                                                             *
- * HISTORY:                                                                                    *
- *   2/1/2002 12:08PM ST : Created                                                             *
- *=============================================================================================*/
-void ServerSettingsClass::Decrypt_Serial(StringClass serial_in, StringClass &serial_out)
-{
-	Encrypt_Serial(serial_in, serial_out, false);
-}
-
 
 
 /***********************************************************************************************
